@@ -1,8 +1,9 @@
-//
-// Created by MSI on 23-01-2026.
-//
+#pragma once
 
-#ifndef MEMORY_POOL_ABSTRACT_H
-#define MEMORY_POOL_ABSTRACT_H
-
-#endif //MEMORY_POOL_ABSTRACT_H
+class MemoryPoolAbstract {
+    public:
+    using byte = unsigned char;
+    virtual void* getMem(std::size_t) = 0;
+    virtual void returnMem(void*) = 0;
+    virtual ~MemoryPoolAbstract() = default;
+};
