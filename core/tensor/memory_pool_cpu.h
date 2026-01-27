@@ -45,7 +45,7 @@ public:
 
     std::list<SizeClass> m_sizes;
     std::size_t m_dynamic_size_class_threshold {5*1024*1024};
-    static constexpr std::size_t MIN_BIN_SIZE {SizeClass::ALIGNMENT}, PAGE_SIZE{8*1024};
+    static constexpr std::size_t MIN_BIN_SIZE {SizeClass::ALIGNMENT}, PAGE_SIZE{64*1024};
     static std::vector<std::size_t> DEFAULT_BINS, DEFAULT_PAGES;
 public:
     explicit MemoryPoolCPU(std::vector<std::size_t>& bins=DEFAULT_BINS,
@@ -57,7 +57,7 @@ public:
 };
 
 std::vector<std::size_t> MemoryPoolCPU::DEFAULT_BINS = {64, 128, 256, 512, 1024, 2048, 4096, 8192},
-                               MemoryPoolCPU::DEFAULT_PAGES = {2, 2, 2, 2, 2, 4, 6, 6};
+                               MemoryPoolCPU::DEFAULT_PAGES = {1, 1, 1, 1, 2, 4, 6, 6};
 
 inline MemoryPoolCPU::MemoryPoolCPU(std::vector<std::size_t>& bins, std::vector<std::size_t>& pages_count) {
     if (pages_count.size() != bins.size()) throw std::invalid_argument("Number of pages does not match number of bins");
@@ -112,6 +112,7 @@ inline void MemoryPoolCPU::SizeClass::add_blocks(std::size_t pages) {
         auto* span {reinterpret_cast<Span*>(mem)};
         span->bin_class_ptr = this;
         m_spans.push_back(span);
+
 
         constexpr std::size_t usable_space {PAGE_SIZE - sizeof(Span)};
         const std::size_t blocks {static_cast<std::size_t>(usable_space / m_class_size)};
