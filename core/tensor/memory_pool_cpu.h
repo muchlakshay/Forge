@@ -5,8 +5,11 @@
 #include <utility>
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstdint>
 #include <list>
+#include <memory>
+#include <cassert>
 
 #ifdef _WIN32
 #include <malloc.h>
@@ -18,137 +21,188 @@
 #define ALIGNED_FREE(ptr) std::free(ptr)
 #endif
 
-class MemoryPoolCPU final : public MemoryPoolAbstract {
-public:
+class Forge::MemoryPoolCPU : public Forge::MemoryPoolAbstract {
 
-    class SizeClass {
+    static constexpr std::size_t INDEXING_BITS {9};
+    struct RadixNode {void* entries[1<<INDEXING_BITS]{};};
+
+    class Bin {
+        struct freeBlock {freeBlock* next_block{};};
+        std::vector<byte*> m_mem_allocated;
+        freeBlock* m_freeListHead {};
+        std::size_t m_class_size{}, m_totalBlocks {}, m_freeBlocks{}, m_chunks_allocated{};
+
+        friend MemoryPoolCPU;
     public:
-        struct Span{SizeClass* bin_class_ptr{};};
-    private:
-        struct FreeBlock{FreeBlock* m_next_block_ptr{};};
-        std::size_t m_class_size {}, m_total_blocks{}, m_free_blocks{};
-        FreeBlock* m_freeList_head{};
-        std::vector<Span*> m_spans;
-    public:
-        static constexpr std::size_t ALIGNMENT {64};
-        explicit SizeClass(std::size_t class_size, std::size_t pages);
-        SizeClass(const SizeClass&) = delete;
-        SizeClass& operator=(const SizeClass&) = delete;
-        void add_blocks(std::size_t pages);
-        void returnBlock(void* ptr);
-        void* getBlock();
-        [[nodiscard]] std::size_t size() const {return m_class_size;}
-        [[nodiscard]] std::size_t total_blocks() const {return m_total_blocks;}
-        [[nodiscard]] std::size_t free_blocks() const {return m_free_blocks;}
-        ~SizeClass();
+        static constexpr std::size_t CHUNK_SIZE {64*1024}, ALIGNMENT{64};
+        explicit Bin(std::size_t class_size, std::size_t chunks);
+        Bin(const Bin&) = delete;
+        Bin& operator=(const Bin&) = delete;
+        void extendBlocks(std::size_t chunks);
+        void* allocate();
+        void free(void* ptr);
+        ~Bin();
     };
 
-    std::list<SizeClass> m_sizes;
-    std::size_t m_dynamic_size_class_threshold {5*1024*1024};
-    static constexpr std::size_t MIN_BIN_SIZE {SizeClass::ALIGNMENT}, PAGE_SIZE{64*1024};
-    static std::vector<std::size_t> DEFAULT_BINS, DEFAULT_PAGES;
+    class RadixTree {
+        RadixNode* m_radix_root {};
+
+        static void destroy_node(RadixNode* node, int level);
+    public:
+        void radix_insert(void* ptr, Forge::MemoryPoolCPU::Bin* bin_ptr);
+        Bin* radix_lookup(void* ptr) const;
+        void clear() {destroy_node(m_radix_root, 0); m_radix_root = nullptr;}
+        ~RadixTree(){destroy_node(m_radix_root, 0);};
+    };
+
+    RadixTree m_radix_tree;
+    std::list<Bin> m_bins;
+
 public:
-    explicit MemoryPoolCPU(std::vector<std::size_t>& bins=DEFAULT_BINS,
-        std::vector<std::size_t>& pages_count=DEFAULT_PAGES);
+    MemoryPoolCPU() = default;
     MemoryPoolCPU(const MemoryPoolCPU&) = delete;
     MemoryPoolCPU& operator=(const MemoryPoolCPU&) = delete;
-    void* getMem(std::size_t size) override;
-    void returnMem(void*) override;
+    void* allocate(std::size_t size) override;
+    void free(void* ptr) override;
+    void hard_clear_cache();
 };
 
-std::vector<std::size_t> MemoryPoolCPU::DEFAULT_BINS = {64, 128, 256, 512, 1024, 2048, 4096, 8192},
-                               MemoryPoolCPU::DEFAULT_PAGES = {1, 1, 1, 1, 2, 4, 6, 6};
 
-inline MemoryPoolCPU::MemoryPoolCPU(std::vector<std::size_t>& bins, std::vector<std::size_t>& pages_count) {
-    if (pages_count.size() != bins.size()) throw std::invalid_argument("Number of pages does not match number of bins");
-
-    auto powerOfTwo{
-        [](const std::size_t num) -> bool {
-            return (num>0) && ((num & (num-1))==0);
+inline void Forge::MemoryPoolCPU::RadixTree::destroy_node(RadixNode* node, int level) {
+    if (!node) return;
+    if (level < 2) {
+        for (void* p : node->entries) {
+            if (p) destroy_node(static_cast<RadixNode*>(p), level + 1);
         }
+    }
+    delete node;
+}
+
+inline void* Forge::MemoryPoolCPU::allocate(std::size_t size) {
+    if (size<Forge::MemoryPoolCPU::Bin::ALIGNMENT) size = Forge::MemoryPoolCPU::Bin::ALIGNMENT;
+    else size = std::bit_ceil(size);
+    constexpr auto chunk_size {Forge::MemoryPoolCPU::Bin::CHUNK_SIZE};
+
+    for (auto& bin : m_bins) {
+        if (bin.m_class_size == size) {
+            if (auto* block {bin.allocate()}; block) return block;
+            else {
+                const auto chunks_to_allocate {std::max<std::size_t>(1, bin.m_chunks_allocated)};
+                bin.extendBlocks(chunks_to_allocate);
+                auto* mem {bin.m_mem_allocated.back()};
+                for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, &bin);
+                return bin.allocate();
+            }
+        }
+    }
+
+    const auto chunks_to_allocate {
+      static_cast<std::size_t>(std::ceil(static_cast<double>(size)/static_cast<double>(chunk_size)))
     };
-
-    if (!(std::ranges::all_of(bins.begin(), bins.end(), powerOfTwo))) throw
-    std::invalid_argument(
-        std::format("Invalid Bin Size(s) Found, Bin Size Must Be A Power Of {}", SizeClass::ALIGNMENT));
-
-    std::ranges::sort(bins);
-    if (bins[0]==0) throw std::invalid_argument("Bin Size Cant Be Zero");
-    else if (bins[0]!=MIN_BIN_SIZE) throw
-        std::invalid_argument(std::format("Minimum Bin Size is {}", MIN_BIN_SIZE));
-
-    for (auto it1 = bins.begin(), it2 = pages_count.begin();
-        it1!=bins.end() && it2!=pages_count.end(); ++it1, ++it2) m_sizes.emplace_back(*it1, *it2);
+    m_bins.emplace_back(size, chunks_to_allocate);
+    auto* mem {m_bins.back().m_mem_allocated.back()};
+    for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, &(m_bins.back()));
+    return m_bins.back().allocate();
 }
 
-inline MemoryPoolCPU::SizeClass::SizeClass(std::size_t class_size, std::size_t pages)
-        : m_class_size {class_size}{
-    add_blocks(pages);
+inline void Forge::MemoryPoolCPU::RadixTree::radix_insert(void *ptr, Forge::MemoryPoolCPU::Bin* bin_ptr) {
+
+    const auto addr {reinterpret_cast<std::uintptr_t>(ptr)};
+    constexpr std::size_t OFFSET {std::countr_zero(MemoryPoolCPU::Bin::CHUNK_SIZE)};
+    constexpr auto indexing_bits{Forge::MemoryPoolCPU::INDEXING_BITS};
+    constexpr auto MASK {(1ULL<<indexing_bits)-1};
+
+    const auto idx {addr>>OFFSET};
+    const auto L1 {(idx >> (indexing_bits*2)) & MASK};
+    const auto L2 {(idx >> indexing_bits) & MASK};
+    const auto L3 {idx & MASK};
+
+    assert(L1 < (1ULL << indexing_bits));
+    assert(L2 < (1ULL << indexing_bits));
+    assert(L3 < (1ULL << indexing_bits));
+
+    if (!m_radix_root) m_radix_root = new RadixNode();
+    if (!(m_radix_root->entries[L1]))  m_radix_root->entries[L1] = new RadixNode();
+    auto* N2 {static_cast<RadixNode*>(m_radix_root->entries[L1])};
+    if (!(N2->entries[L2])) N2->entries[L2] = new RadixNode();
+    auto* N3 {static_cast<RadixNode*>(N2->entries[L2])};
+
+    N3->entries[L3] = bin_ptr;
 }
 
-inline void* MemoryPoolCPU::getMem(std::size_t size) {
-    for (auto& bin : m_sizes) {
-        if (bin.size()>=size) {
-            if (auto* block_ptr{bin.getBlock()}; block_ptr) return block_ptr;
-            else {bin.add_blocks(1); return bin.getBlock();}
-        }
+inline Forge::MemoryPoolCPU::Bin* Forge::MemoryPoolCPU::RadixTree::radix_lookup(void *ptr) const {
+    const auto addr {reinterpret_cast<std::uintptr_t>(ptr)};
+    constexpr auto indexing_bits {Forge::MemoryPoolCPU::INDEXING_BITS};
+    constexpr std::size_t OFFSET {std::countr_zero(MemoryPoolCPU::Bin::CHUNK_SIZE)};
+    constexpr auto MASK {(1ULL<<indexing_bits)-1};
+
+    const auto idx {addr>>OFFSET};
+    const auto L1 {(idx >> (indexing_bits*2)) & MASK};
+    const auto L2 {(idx >> indexing_bits) & MASK};
+    const auto L3 {idx & MASK};
+
+    assert(L1 < (1ULL << indexing_bits));
+    assert(L2 < (1ULL << indexing_bits));
+    assert(L3 < (1ULL << indexing_bits));
+
+    if (!m_radix_root) return nullptr;
+    RadixNode *N2{}, *N3{};
+    N2 = static_cast<RadixNode*>(m_radix_root->entries[L1]);
+    if (!N2) return nullptr;
+    N3 = static_cast<RadixNode*>(N2->entries[L2]);
+    if (!N3) return nullptr;
+    auto* bin_ptr {static_cast<Bin*>(N3->entries[L3])};
+    return bin_ptr?bin_ptr:nullptr;
+}
+
+inline void Forge::MemoryPoolCPU::free(void* ptr) {
+    if (!ptr) return;
+    if (auto* bin_ptr {m_radix_tree.radix_lookup(ptr)}; bin_ptr) bin_ptr->free(ptr);
+}
+
+inline void Forge::MemoryPoolCPU::hard_clear_cache() {
+    m_radix_tree.clear();
+    m_bins.clear();
+}
+
+inline Forge::MemoryPoolCPU::Bin::Bin(std::size_t class_size, std::size_t chunks) {
+    m_class_size = std::bit_ceil(class_size);
+    if (m_class_size>(chunks*CHUNK_SIZE)) throw std::invalid_argument(
+        std::format("number of chunks are less to at least initialize one block of {}B bin size", class_size)
+    );
+    extendBlocks(chunks);
+}
+
+inline void Forge::MemoryPoolCPU::Bin::extendBlocks(std::size_t chunks) {
+    auto* mem {static_cast<byte*>(ALIGNED_ALLOC(chunks*CHUNK_SIZE, CHUNK_SIZE))};
+    m_mem_allocated.push_back(mem);
+    const std::size_t blocks {(chunks*CHUNK_SIZE)/m_class_size};
+    for (std::size_t block{}; block<blocks; ++block) {
+        auto* block_base {mem+block*m_class_size};
+        auto* block_ptr {reinterpret_cast<freeBlock*>(block_base)};
+        block_ptr->next_block = m_freeListHead;
+        m_freeListHead = block_ptr;
     }
-    std::size_t rounded_size {std::bit_ceil(size)};
-    m_sizes.emplace_back(rounded_size, size<=m_dynamic_size_class_threshold?2:1);
-    return m_sizes.back().getBlock();
+    m_totalBlocks += blocks; m_freeBlocks += blocks, m_chunks_allocated += chunks;
 }
 
-inline void MemoryPoolCPU::returnMem(void* ptr) {
-    constexpr std::uintptr_t SIZE {PAGE_SIZE}, MASK {~(SIZE-1)};
-    const auto* span_ptr {reinterpret_cast<SizeClass::Span*>(reinterpret_cast<std::uintptr_t>(ptr) & MASK)};
-    span_ptr->bin_class_ptr->returnBlock(ptr);
+inline void* Forge::MemoryPoolCPU::Bin::allocate() {
+    // std::cout<<"Allocating From Bin Size "<<m_class_size<<"\n";
+    if (!m_freeListHead) return nullptr;
+    auto* free_block {m_freeListHead};
+    m_freeListHead = free_block->next_block;
+    m_freeBlocks--;
+    return free_block;
 }
 
-inline void MemoryPoolCPU::SizeClass::add_blocks(std::size_t pages) {
-    for (std::size_t page{}; page<pages; ++page) {
-
-        auto* mem {static_cast<byte*>(ALIGNED_ALLOC(PAGE_SIZE, PAGE_SIZE))};
-        if (!mem) throw std::bad_alloc();
-        auto* span {reinterpret_cast<Span*>(mem)};
-        span->bin_class_ptr = this;
-        m_spans.push_back(span);
-
-
-        constexpr std::size_t usable_space {PAGE_SIZE - sizeof(Span)};
-        const std::size_t blocks {static_cast<std::size_t>(usable_space / m_class_size)};
-
-        byte* current_block_ptr = mem + sizeof(Span);
-
-        for (std::size_t i {}; i < blocks; i++) {
-            auto* block {reinterpret_cast<FreeBlock*>(current_block_ptr)};
-            block->m_next_block_ptr = m_freeList_head;
-            m_freeList_head = block;
-            current_block_ptr += m_class_size;
-        }
-
-        m_total_blocks += blocks;
-        m_free_blocks += blocks;
-    }
+inline void Forge::MemoryPoolCPU::Bin::free(void* ptr) {
+    // std::cout<<"Deallocating To Bin Size "<<m_class_size<<"\n";
+    auto* freed_block {static_cast<freeBlock*>(ptr)};
+    freed_block->next_block = m_freeListHead;
+    m_freeListHead = freed_block;
+    m_freeBlocks++;
 }
 
-inline void* MemoryPoolCPU::SizeClass::getBlock() {
-    std::cout<<"Allocating From "<<m_class_size<<"\n";
-    if (!m_freeList_head) return nullptr;
-    auto* block {m_freeList_head};
-    m_freeList_head = block->m_next_block_ptr;
-    auto* block_to_return {reinterpret_cast<void*>(block)};
-    m_free_blocks--;
-    return block_to_return;
-}
-
-inline void MemoryPoolCPU::SizeClass::returnBlock(void* ptr) {
-    std::cout<<"Deallocating To "<<m_class_size<<"\n";
-    auto* returned_block {static_cast<FreeBlock*>(ptr)};
-    returned_block->m_next_block_ptr = m_freeList_head;
-    m_freeList_head = returned_block;
-    m_free_blocks++;
-}
-
-inline MemoryPoolCPU::SizeClass::~SizeClass() {
-    for (const auto& block_ptr : MemoryPoolCPU::SizeClass::m_spans) ALIGNED_FREE(block_ptr);
+inline Forge::MemoryPoolCPU::Bin::~Bin() {
+    for (const auto& mem: m_mem_allocated) ALIGNED_FREE(mem);
 }
