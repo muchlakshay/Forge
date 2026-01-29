@@ -1,9 +1,14 @@
 #pragma once
 
-class MemoryPoolAbstract {
+namespace Forge {
+    class MemoryPoolAbstract;
+    class MemoryPoolCPU;
+}
+
+class Forge::MemoryPoolAbstract {
     public:
     using byte = unsigned char;
-    virtual void* getMem(std::size_t) = 0;
-    virtual void returnMem(void*) = 0;
+    virtual void* allocate(std::size_t) = 0;
+    virtual void free(void*) = 0;
     virtual ~MemoryPoolAbstract() = default;
 };
