@@ -21,6 +21,15 @@
 #define ALIGNED_FREE(ptr) std::free(ptr)
 #endif
 
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+    #include <xmmintrin.h>
+    #define PREFETCH(addr, rw, locality) _mm_prefetch((const char*)addr, (locality > 0) ? _MM_HINT_T0 : _MM_HINT_NTA)
+#elif defined(__GNUC__) || defined(__clang__)
+    #define PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
+#else
+    #define PREFETCH(addr, rw, locality) do { (void)addr; (void)rw; (void)locality; } while (0)
+#endif
+
 class Forge::MemoryPoolCPU : public Forge::MemoryPoolAbstract {
 
     static constexpr std::size_t INDEXING_BITS {9};
@@ -28,9 +37,13 @@ class Forge::MemoryPoolCPU : public Forge::MemoryPoolAbstract {
 
     class Bin {
         struct freeBlock {freeBlock* next_block{};};
+        struct Span {std::size_t m_blocks_used{}; Bin* bin_ptr{};};
         std::vector<byte*> m_mem_allocated;
+        std::vector<Span> m_spans_allocated;
         freeBlock* m_freeListHead {};
         std::size_t m_class_size{}, m_totalBlocks {}, m_freeBlocks{}, m_chunks_allocated{};
+
+        void free_cache();
 
         friend MemoryPoolCPU;
     public:
@@ -56,7 +69,7 @@ class Forge::MemoryPoolCPU : public Forge::MemoryPoolAbstract {
     };
 
     RadixTree m_radix_tree;
-    std::list<Bin> m_bins;
+    std::unique_ptr<Bin> m_bins [64] {};
 
 public:
     MemoryPoolCPU() = default;
@@ -83,26 +96,25 @@ inline void* Forge::MemoryPoolCPU::allocate(std::size_t size) {
     else size = std::bit_ceil(size);
     constexpr auto chunk_size {Forge::MemoryPoolCPU::Bin::CHUNK_SIZE};
 
-    for (auto& bin : m_bins) {
-        if (bin.m_class_size == size) {
-            if (auto* block {bin.allocate()}; block) return block;
-            else {
-                const auto chunks_to_allocate {std::max<std::size_t>(1, bin.m_chunks_allocated)};
-                bin.extendBlocks(chunks_to_allocate);
-                auto* mem {bin.m_mem_allocated.back()};
-                for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, &bin);
-                return bin.allocate();
-            }
+    const auto bin_idx {std::countr_zero(size)};
+    auto& bin {m_bins[bin_idx]};
+    if (bin) {
+        if (auto* block {bin->allocate()}; block) return block;
+        else {
+            const auto chunks_to_allocate {std::max<std::size_t>(1, bin->m_chunks_allocated)};
+            bin->extendBlocks(chunks_to_allocate);
+            auto* mem {bin->m_mem_allocated.back()};
+            for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, bin.get());
+            return bin->allocate();
         }
     }
-
-    const auto chunks_to_allocate {
-      static_cast<std::size_t>(std::ceil(static_cast<double>(size)/static_cast<double>(chunk_size)))
-    };
-    m_bins.emplace_back(size, chunks_to_allocate);
-    auto* mem {m_bins.back().m_mem_allocated.back()};
-    for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, &(m_bins.back()));
-    return m_bins.back().allocate();
+    else {
+        const auto chunks_to_allocate {(size+chunk_size-1)/chunk_size};
+        bin = std::make_unique<Bin>(size, chunks_to_allocate);
+        auto* mem {bin->m_mem_allocated.back()};
+        for (std::size_t chunk{}; chunk<chunks_to_allocate; ++chunk) m_radix_tree.radix_insert(mem+chunk*chunk_size, bin.get());
+        return bin->allocate();
+    }
 }
 
 inline void Forge::MemoryPoolCPU::RadixTree::radix_insert(void *ptr, Forge::MemoryPoolCPU::Bin* bin_ptr) {
@@ -162,7 +174,7 @@ inline void Forge::MemoryPoolCPU::free(void* ptr) {
 
 inline void Forge::MemoryPoolCPU::hard_clear_cache() {
     m_radix_tree.clear();
-    m_bins.clear();
+    for (std::size_t i {}; i<std::size(m_bins); ++i){if (m_bins[i]) m_bins[i]->free_cache();}
 }
 
 inline Forge::MemoryPoolCPU::Bin::Bin(std::size_t class_size, std::size_t chunks) {
@@ -188,8 +200,9 @@ inline void Forge::MemoryPoolCPU::Bin::extendBlocks(std::size_t chunks) {
 
 inline void* Forge::MemoryPoolCPU::Bin::allocate() {
     // std::cout<<"Allocating From Bin Size "<<m_class_size<<"\n";
-    if (!m_freeListHead) return nullptr;
+    if (!m_freeListHead) [[unlikely]] return nullptr;
     auto* free_block {m_freeListHead};
+    PREFETCH(free_block->next_block, 0, 1);
     m_freeListHead = free_block->next_block;
     m_freeBlocks--;
     return free_block;
@@ -203,6 +216,13 @@ inline void Forge::MemoryPoolCPU::Bin::free(void* ptr) {
     m_freeBlocks++;
 }
 
-inline Forge::MemoryPoolCPU::Bin::~Bin() {
+inline void Forge::MemoryPoolCPU::Bin::free_cache() {
     for (const auto& mem: m_mem_allocated) ALIGNED_FREE(mem);
+    m_mem_allocated.clear();
+    m_totalBlocks = m_freeBlocks = 0;
+}
+
+
+inline Forge::MemoryPoolCPU::Bin::~Bin() {
+    free_cache();
 }
