@@ -1,8 +1,7 @@
-//
-// Created by MSI on 23-01-2026.
-//
+#pragma once
 
-#ifndef TENSOR_H
-#define TENSOR_H
-
-#endif //TENSOR_H
+namespace Forge {
+    class Tensor{};
+    enum class Dtype {float16, float32, float64, int16, int32, int64};
+    enum Device {CPU, CUDA};
+}
