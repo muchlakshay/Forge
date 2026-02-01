@@ -4,7 +4,7 @@
 namespace Forge {
     class Tensor{};
     enum class Dtype {float32, float16, float64, int16, int32, int64};
-    enum Device {CPU, CUDA};
+    enum class Device {CPU, CUDA};
 }
 
 class Forge::Tensor {
