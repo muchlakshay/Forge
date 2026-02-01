@@ -13,4 +13,5 @@ class Forge::Tensor {
     std::shared_ptr<StorageAbstract> m_storage{};
     std::vector<std::size_t> m_shape{}, m_strides{};
     std::size_t m_size{};
+    bool m_need_grads{};
 };
