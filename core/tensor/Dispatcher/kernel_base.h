@@ -1,16 +1,11 @@
 #pragma once
+#include <source_location>
 #include <string_view>
-
-#if defined(__GNUC__) || defined(__clang__)
-#define CURRENT_FUNCTION __PRETTY_FUNCTION__
-#elif  defined(__MSC_VER__)
-#define CURRENT_FUNTION __FUNCSIG__
-#else
-#error "unsupported compiler"
-#endif
+#include <ctti/type_id.hpp>
 
 class Kernel {
-    constexpr std::string_view m_kernelName{};
-    constexpr explicit Kernel(const std::string_view kernelName) : m_kernelName(kernelName) {}
-    constexpr auto kernel_name_str() const {return m_kernelName;}
+    ctti::type_id_t m_derived_id{};
+public:
+    constexpr explicit Kernel(const ctti::type_id_t& derived_id) : m_derived_id{derived_id} {}
+    [[nodiscard]] constexpr ctti::type_id_t derived_id() const {return m_derived_id;}
 };
