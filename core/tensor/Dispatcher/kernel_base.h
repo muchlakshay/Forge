@@ -3,7 +3,11 @@
 #include <string_view>
 #include <ctti/type_id.hpp>
 
-class Kernel {
+namespace Forge {
+    class Kernel;
+}
+
+class Forge::Kernel {
     ctti::type_id_t m_derived_id{};
 public:
     constexpr explicit Kernel(const ctti::type_id_t& derived_id) : m_derived_id{derived_id} {}
