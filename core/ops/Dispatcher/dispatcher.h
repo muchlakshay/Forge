@@ -2,6 +2,49 @@
 #include "kernel_base.h"
 #include "tensor.h"
 
+#define DISPATCH_ALL_TYPES(DTYPE, DEVICE, ...)\
+[&] {                                  \
+switch (DTYPE) {                       \
+case Forge::DType::float16: {          \
+if(DEVICE==Forge::Device::CUDA){       \
+using scalar_t = __half;               \
+__VA_ARGS__();                         \
+}                                      \
+else {                                 \
+using scalar_t = Eigen::half;          \
+ __VA_ARGS__();                        \
+}                                      \
+break ;                                \
+}                                      \
+case Forge::DType::float32: {          \
+using scalar_t = float;                \
+__VA_ARGS__();                         \
+break;                                 \
+}                                      \
+case Forge::DType::float64: {          \
+using scalar_t = double;               \
+__VA_ARGS__();                         \
+break;                                 \
+}                                      \
+case Forge::DType::int16: {            \
+using scalar_t = std::int16_t;         \
+__VA_ARGS__();                         \
+break;                                 \
+}                                      \
+case Forge::DType::int32: {            \
+using scalar_t = std::int32_t;         \
+__VA_ARGS__();                         \
+break;                                 \
+}                                      \
+case Forge::DType::int64: {            \
+using scalar_t = std::int64_t;         \
+__VA_ARGS__();                         \
+break;                                 \
+}                                      \
+default: throw std::runtime_error("Unsupported type");\
+}                                      \
+}()
+
 namespace Forge {
     class Dispatcher;
 }
