@@ -1,8 +1,9 @@
 #pragma once
 #include "Storage/storage_cpu.h"
+#include "../ops/Dispatcher/dispatcher.h"
 
 namespace Forge {
-    class Tensor{};
+    class Tensor;
     enum class Dtype {float32, float16, float64, int16, int32, int64, DtypeCount};
     enum class Device {CPU, CUDA};
 }
@@ -23,6 +24,8 @@ class Forge::Tensor {
     std::vector<std::size_t> m_shape{}, m_strides{};
     std::size_t m_size{};
     bool m_need_grads{};
+
+    static Dispatcher main_dispatcher;
 public:
     explicit Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype = Forge::Dtype::float32, bool need_grads = true,
         Forge::Device device = Forge::Device::CPU);
