@@ -1,6 +1,5 @@
 #pragma once
 #include "kernel_base.h"
-#include "tensor.h"
 #include <Eigen/Dense>
 
 #define DISPATCH_ALL_TYPES(DTYPE, DEVICE, ...)\
@@ -57,7 +56,7 @@ concept Enum = std::is_enum_v<T>;
 
 class Forge::Dispatcher {
 public:
-    enum class Ops{add, sub, matmul, OpsCount};
+    enum class Ops{add, sub, matmul, storage_backend, OpsCount};
     enum class DispatchKey {CPU, CUDA, CPU_Autodiff, CUDA_Autodiff, DispatchKeysCount};
 private:
     Forge::Kernel* m_registry [static_cast<int>(Ops::OpsCount)][static_cast<int>(DispatchKey::DispatchKeysCount)] {nullptr};
@@ -83,7 +82,7 @@ inline T* Forge::Dispatcher::lookup(Ops op, DispatchKey dispatch_key) {
     if (kernel==nullptr)
         throw std::invalid_argument("Kernel not registered");
 
-    if (kernel->derived_id() == ctti::type_id<T>)
+    if (kernel->derived_id() == ctti::type_id<T>())
         return static_cast<T*>(kernel);
     else throw std::invalid_argument("Invalid Op class passed to downcast to");
 }
