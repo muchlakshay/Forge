@@ -66,7 +66,7 @@ inline Forge::Dispatcher<Forge::UtilityOps>& Forge::Tensor::dispatcher() {
 }
 
 inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype, bool need_grads,
-        Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_need_grads{need_grads},
+        Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_strides(shape.size(), 0), m_need_grads{need_grads},
         m_dispatch_key {device==Device::CPU?DispatchKey::CPU : DispatchKey::CUDA}{
 
     std::size_t size {1u};
