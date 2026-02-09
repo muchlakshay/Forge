@@ -1,8 +1,10 @@
-//
-// Created by MSI on 04-02-2026.
-//
+#pragma once
+#include "enums.h"
+#include "ops/Dispatcher/dispatcher.h"
 
-#ifndef UTILITY_OPS_H
-#define UTILITY_OPS_H
+namespace Forge {
+    void register_utility_kernels(Dispatcher<UtilityOps>& dispatcher);
+}
 
-#endif //UTILITY_OPS_H
+
+
