@@ -64,3 +64,18 @@ inline Forge::Dispatcher<Forge::UtilityOps>& Forge::Tensor::dispatcher() {
     is_defined = true;
     return utility_dispatcher;
 }
+
+inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype, bool need_grads,
+        Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_need_grads{need_grads},
+        m_dispatch_key {device==Device::CPU?DispatchKey::CPU : DispatchKey::CUDA}{
+
+    std::size_t size {1u};
+    for (int i = shape.size()-1; i>=0; i--) {
+        m_strides[i] = size;
+        size*=m_shape[i];
+    }
+    m_size = size;
+    const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
+    storage_backend->getStorageBackend(m_storage, size, m_dtype);
+}
+
