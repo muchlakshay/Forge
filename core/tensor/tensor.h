@@ -79,3 +79,10 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
 }
 
+template <typename T>
+Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
+    Eigen::array<Eigen::Index, 4> eigen_dims;
+    eigen_dims.fill(1);
+    for (int i{static_cast<int>(m_shape.size()-1)}; i>=0; i--) eigen_dims[i] = m_shape[i];
+    return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
+}
