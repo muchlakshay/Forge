@@ -54,7 +54,13 @@ public:
     [[nodiscard]] void* data() const {return m_storage->data();}
 };
 
-
+template<typename T>
+void infer_shape(const T&, const std::vector<std::size_t>&){}
+template<typename T>
+void infer_shape(const std::initializer_list<T>& init_list, std::vector<std::size_t>& shape) {
+    shape.push_back(init_list.size());
+    infer_shape(*init_list.begin(), shape);
+}
 
 inline Forge::Dispatcher<Forge::UtilityOps>& Forge::Tensor::dispatcher() {
     static Dispatcher<UtilityOps> utility_dispatcher;
@@ -78,6 +84,12 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
 }
+
+template<typename T>
+void Forge::Tensor::setValues(init_list_1D<T>) {
+
+}
+
 
 template <typename T>
 Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
