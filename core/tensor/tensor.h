@@ -46,12 +46,16 @@ public:
     template <typename T>
     Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> as_eigen() const;
 
+    static Tensor Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads=true,
+        Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
+
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
     [[nodiscard]] const auto& strides() const {return m_strides;} ;
     [[nodiscard]] const auto& dtype() const {return m_dtype;} ;
     [[nodiscard]] const auto& device() const {return m_device;} ;
     [[nodiscard]] void* data() const {return m_storage->data();}
+    [[nodiscard]] auto size() const {return m_size;}
 };
 
 template<typename T>
@@ -83,6 +87,15 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     m_size = size;
     const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
+}
+
+
+inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,
+    Dtype dtype,Device device) {
+    Tensor tensor(shape, dtype, need_grads, device);
+    auto* constAbstract {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, tensor.m_dispatch_key)};
+    constAbstract->setConstant(tensor.data(), tensor.size(), constant, dtype);
+    return tensor;
 }
 
 template<typename T>
