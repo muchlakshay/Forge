@@ -48,6 +48,10 @@ public:
 
     static Tensor Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads=true,
         Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
+    static Tensor Ones(const std::vector<std::size_t>& shape, bool need_grads=true,
+    Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
+    static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
+    Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
 
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
@@ -96,6 +100,16 @@ inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& sha
     auto* constAbstract {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, tensor.m_dispatch_key)};
     constAbstract->setConstant(tensor.data(), tensor.size(), constant, dtype);
     return tensor;
+}
+
+inline Forge::Tensor Forge::Tensor::Ones(const std::vector<std::size_t>& shape, bool need_grads,
+    Dtype dtype, Device device) {
+    return Constant(shape, 1, need_grads, dtype, device);
+}
+
+inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape, bool need_grads,
+    Dtype dtype, Device device) {
+    return Constant(shape, 0, need_grads, dtype, device);
 }
 
 template<typename T>
