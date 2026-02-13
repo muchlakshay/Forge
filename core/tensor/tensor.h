@@ -170,6 +170,23 @@ inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape,
     return Constant(shape, 0, need_grads, dtype, device);
 }
 
+template<typename T, typename U>
+void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
+    check_shape_and_throw(init_list, m_shape);
+    auto flattened_list {flatten_list<T>(init_list)};
+    const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
+    initializer->initialize(flattened_list.data(), m_storage->data(), dtype_of<T>(), m_dtype, m_size);
+}
+
+template<TensorStorageType T>
+inline Forge::Tensor& Forge::Tensor::operator=(init_list_1D<T> init_list) {initialize(init_list);return *this;}
+template<TensorStorageType T>
+inline Forge::Tensor& Forge::Tensor::operator=(init_list_2D<T> init_list) {initialize<T>(init_list); return *this;}
+template<TensorStorageType T>
+inline Forge::Tensor& Forge::Tensor::operator=(init_list_3D<T> init_list) {initialize<T>(init_list); return *this;}
+template<TensorStorageType T>
+inline Forge::Tensor& Forge::Tensor::operator=(init_list_4D<T> init_list) {initialize<T>(init_list); return *this;}
+
 
 template <typename T>
 inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
