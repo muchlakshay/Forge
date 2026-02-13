@@ -178,6 +178,7 @@ void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
     initializer->initialize(flattened_list.data(), m_storage->data(), dtype_of<T>(), m_dtype, m_size);
 }
 
+
 template<TensorStorageType T>
 inline Forge::Tensor& Forge::Tensor::operator=(init_list_1D<T> init_list) {initialize(init_list);return *this;}
 template<TensorStorageType T>
@@ -194,4 +195,11 @@ inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_
     eigen_dims.fill(1);
     for (int i{static_cast<int>(m_shape.size()-1)}; i>=0; i--) eigen_dims[i] = m_shape[i];
     return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
+}
+
+
+inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
+    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::print, tensor.dispatch_key())};
+    print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
+    return os;
 }
