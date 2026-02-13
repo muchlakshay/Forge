@@ -8,6 +8,8 @@ namespace Forge {
     struct StorageBackendCPU;
     struct ConstantAbstract;
     struct ConstantCPU;
+    struct InitializeAbstract;
+    struct InitializeCPU;
 
     using Scalar = std::variant<
     float,
@@ -54,11 +56,29 @@ struct Forge::ConstantCPU : public ConstantAbstract {
     }
 };
 
+struct Forge::InitializeAbstract : public Forge::Kernel {
+    InitializeAbstract() : Kernel{ctti::type_id<InitializeAbstract>()} {}
+    virtual void initialize(const void* src, void* dst, Dtype src_dtype, Dtype dst_dtype, std::size_t size) const = 0;
+};
+
+struct Forge::InitializeCPU : public InitializeAbstract {
+    void initialize(const void* src, void* dst, Dtype src_dtype, Dtype dst_dtype, std::size_t size) const override {
+        DISPATCH_ALL_TYPES(dst_dtype, Device::CPU, [&] {
+            using dst_t = scalar_t;
+            auto* dst_ptr {static_cast<dst_t*>(dst)};
+            DISPATCH_ALL_TYPES(src_dtype, Device::CPU, [&] {
+                using src_t = scalar_t;
+                auto* src_ptr {static_cast<const src_t*>(src)};
+                for (std::size_t i {}; i<size; ++i) dst_ptr[i] = static_cast<dst_t>(src_ptr[i]);
+            });
+        });
+    }
+};
 inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) {
     static StorageBackendCPU storageBackendCPU{};
     static ConstantCPU constantCPU{};
+    static InitializeCPU initializeCPU{};
     dispatcher.register_kernel<StorageBackend>(&storageBackendCPU, UtilityOps::storage_backend, DispatchKey::CPU);
     dispatcher.register_kernel<ConstantAbstract>(&constantCPU, UtilityOps::constant, DispatchKey::CPU);
+    dispatcher.register_kernel<InitializeAbstract>(&initializeCPU, UtilityOps::initializers, DispatchKey::CPU);
 }
-
-
