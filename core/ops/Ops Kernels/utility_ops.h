@@ -10,6 +10,8 @@ namespace Forge {
     struct ConstantCPU;
     struct InitializeAbstract;
     struct InitializeCPU;
+    struct PrintAbstract;
+    struct PrintCPU;
 
     using Scalar = std::variant<
     float,
@@ -74,11 +76,59 @@ struct Forge::InitializeCPU : public InitializeAbstract {
         });
     }
 };
+
+struct Forge::PrintAbstract : public Forge::Kernel {
+    PrintAbstract() : Kernel{ctti::type_id<PrintAbstract>()} {}
+    virtual void print(const void* data_ptr, const std::vector<std::size_t>& shape,const std::vector<std::size_t>& strides,
+        Dtype dtype, std::ostream& os) const = 0;
+};
+
+struct Forge::PrintCPU : public PrintAbstract {
+    void print(const void* data_ptr, const std::vector<std::size_t>& shape, const std::vector<std::size_t>& strides,
+        Dtype dtype, std::ostream& os) const override {
+        if (shape.empty()) {os << "Tensor([])"; return;}
+        os << "Tensor(shape=";
+        for (size_t i = 0; i < shape.size(); ++i) { os << shape[i]; if (i + 1 != shape.size()) os << "x";}
+        os << "):\n";
+
+        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
+            print_tensor_impl<scalar_t>(os, data_ptr, shape, strides);
+        });
+    }
+    template<typename T>
+    void print_tensor_impl(std::ostream& os, const void* data_ptr, const std::vector<std::size_t>& shape,
+        const std::vector<std::size_t>& strides) const {
+        const T* data = static_cast<const T*>(data_ptr);
+        print_recursive(os,data,shape,strides,0,0);
+    }
+    template<typename T>
+    void print_recursive(std::ostream& os, const T* data, const std::vector<std::size_t>& shape,
+        const std::vector<std::size_t>& strides, std::size_t dim, std::size_t offset
+    ) const {
+            os << "[";
+            if (dim == shape.size() - 1) {
+                for (std::size_t i = 0; i < shape[dim]; ++i) {
+                    os << data[offset + i * strides[dim]];
+                    if (i + 1 != shape[dim]) os << ", ";
+                }
+            }
+            else {
+                for (std::size_t i = 0; i < shape[dim]; ++i) {
+                    print_recursive(os,data,shape,strides,dim + 1, offset + i * strides[dim]);
+                    if (i + 1 != shape[dim]) { os << ",\n" << std::string(dim + 1, ' ');}
+                }
+            }
+            os << "]";
+        }
+};
+
 inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) {
     static StorageBackendCPU storageBackendCPU{};
     static ConstantCPU constantCPU{};
     static InitializeCPU initializeCPU{};
+    static PrintCPU printCPU{};
     dispatcher.register_kernel<StorageBackend>(&storageBackendCPU, UtilityOps::storage_backend, DispatchKey::CPU);
     dispatcher.register_kernel<ConstantAbstract>(&constantCPU, UtilityOps::constant, DispatchKey::CPU);
     dispatcher.register_kernel<InitializeAbstract>(&initializeCPU, UtilityOps::initializers, DispatchKey::CPU);
+    dispatcher.register_kernel<PrintAbstract>(&printCPU, UtilityOps::print, DispatchKey::CPU);
 }
