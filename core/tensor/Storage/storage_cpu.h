@@ -20,7 +20,7 @@ class Forge::StorageCPU final : public Forge::StorageAbstract {
     std::size_t m_size {};
 public:
     explicit StorageCPU(const std::size_t size);
-    explicit StorageCPU(void* another, const std::size_t size);
+    explicit StorageCPU(void* another, const std::size_t offset, const std::size_t size);
 
     StorageCPU(StorageCPU&& another) noexcept;
     StorageCPU& operator=(StorageCPU&& another) noexcept;
@@ -30,7 +30,8 @@ public:
 
     ~StorageCPU() override {if (!m_is_view && m_data_ptr) Forge::cpu_memory_pool().free(m_data_ptr);};
     StorageCPU clone() const;
-    void* data() const override {return m_data_ptr;}
+
+    [[nodiscard]] void* data() const override {return m_data_ptr;}
     T* data_() const {return m_data_ptr;}
     [[nodiscard]] std::size_t nbytes() const override {return m_size*sizeof(T);}
     [[nodiscard]] std::size_t size() const {return m_size;}
@@ -40,8 +41,8 @@ template <TensorStorageType T>
 inline Forge::StorageCPU<T>::StorageCPU(const std::size_t size)
         : m_data_ptr(static_cast<T*>(Forge::cpu_memory_pool().allocate(size*sizeof(T)))), m_size(size) {}
 template<TensorStorageType T>
-inline Forge::StorageCPU<T>::StorageCPU(void *another, const std::size_t size)
-    : m_is_view{true}, m_data_ptr{static_cast<T*>(another)}, m_size{size} {}
+inline Forge::StorageCPU<T>::StorageCPU(void *another, const std::size_t offset, const std::size_t size)
+    : m_is_view{true}, m_data_ptr{static_cast<T*>(another)+offset}, m_size{size} {}
 template<TensorStorageType T>
 inline Forge::StorageCPU<T>::StorageCPU(StorageCPU&& another) noexcept
     : m_is_view{another.m_is_view}, m_data_ptr{another.m_data_ptr}, m_size{another.m_size}{

@@ -187,6 +187,7 @@ inline Forge::MemoryPoolCPU::Bin::Bin(std::size_t class_size, std::size_t chunks
 
 inline void Forge::MemoryPoolCPU::Bin::extendBlocks(std::size_t chunks) {
     auto* mem {static_cast<byte*>(ALIGNED_ALLOC(chunks*CHUNK_SIZE, CHUNK_SIZE))};
+    if (!mem) throw std::bad_alloc();
     m_mem_allocated.push_back(mem);
     const std::size_t blocks {(chunks*CHUNK_SIZE)/m_class_size};
     for (std::size_t block{}; block<blocks; ++block) {
