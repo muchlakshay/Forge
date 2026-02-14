@@ -1,6 +1,4 @@
 #pragma once
-#include <source_location>
-#include <string_view>
 #include <ctti/type_id.hpp>
 
 namespace Forge {
