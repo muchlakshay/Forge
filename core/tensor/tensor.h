@@ -57,13 +57,15 @@ public:
         Forge::Device device = Forge::Device::CPU);
 
     template <TensorStorageType T>
-    Forge::Tensor& operator=(init_list_1D<T>);
+    Tensor& operator=(init_list_1D<T>);
     template <TensorStorageType T>
-    Forge::Tensor& operator=(init_list_2D<T>);
+    Tensor& operator=(init_list_2D<T>);
     template <TensorStorageType T>
-    Forge::Tensor& operator=(init_list_3D<T>);
+    Tensor& operator=(init_list_3D<T>);
     template <TensorStorageType T>
-    Forge::Tensor& operator=(init_list_4D<T>);
+    Tensor& operator=(init_list_4D<T>);
+    template <TensorStorageType T>
+    Tensor& operator=(T);
 
     Tensor operator[](std::size_t index);
 
@@ -174,6 +176,13 @@ inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape,
     return Constant(shape, 0, need_grads, dtype, device);
 }
 
+template <TensorStorageType T>
+Forge::Tensor& Forge::Tensor::operator=(T val){
+    const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
+    initializer->initialize(&val, m_storage->data(), dtype_of<T>(), m_dtype, 1);
+    return *this;
+}
+
 template<typename T, typename U>
 void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
     check_shape_and_throw(init_list, m_shape);
@@ -181,7 +190,6 @@ void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
     const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
     initializer->initialize(flattened_list.data(), m_storage->data(), dtype_of<T>(), m_dtype, m_size);
 }
-
 
 template<TensorStorageType T>
 inline Forge::Tensor& Forge::Tensor::operator=(init_list_1D<T> init_list) {initialize<T>(init_list); return *this;}
