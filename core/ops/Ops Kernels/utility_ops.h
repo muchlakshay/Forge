@@ -25,17 +25,20 @@ namespace Forge {
 struct Forge::StorageBackend : public Forge::Kernel {
     StorageBackend() : Kernel{ctti::type_id<StorageBackend>()} {}
     virtual void getStorageBackend(std::shared_ptr<StorageAbstract>&, std::size_t, Dtype) const = 0;
+    virtual void setView(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        std::size_t offset, std::size_t size, Dtype dtype) const = 0;
     ~StorageBackend() override = default;
 };
 
 struct Forge::StorageBackendCPU : public StorageBackend {
     void getStorageBackend(std::shared_ptr<StorageAbstract>& out, std::size_t size, Dtype dtype) const override{
-        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&]{impl<scalar_t>(out, size);});
+        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&]{out = std::make_shared<StorageCPU<scalar_t>>(size);;});
     }
-private:
-    template <TensorStorageType T>
-    void impl(std::shared_ptr<StorageAbstract>& out, std::size_t size) const {
-        out = std::make_shared<StorageCPU<T>>(size);
+    void setView(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        std::size_t offset, std::size_t size, Dtype dtype) const override {
+        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
+            dst = std::make_shared<StorageCPU<scalar_t>>(src->data(), offset, size);
+        });
     }
 };
 
@@ -86,7 +89,10 @@ struct Forge::PrintAbstract : public Forge::Kernel {
 struct Forge::PrintCPU : public PrintAbstract {
     void print(const void* data_ptr, const std::vector<std::size_t>& shape, const std::vector<std::size_t>& strides,
         Dtype dtype, std::ostream& os) const override {
-        if (shape.empty()) {os << "Tensor([])"; return;}
+        if (shape.empty()) {
+            DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {os << "Tensor(["<<*static_cast<const scalar_t*>(data_ptr)<<"])";});
+            return;
+        }
         os << "Tensor(shape=";
         for (size_t i = 0; i < shape.size(); ++i) { os << shape[i]; if (i + 1 != shape.size()) os << "x";}
         os << "):\n";
