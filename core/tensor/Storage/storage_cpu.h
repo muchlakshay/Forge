@@ -31,7 +31,7 @@ public:
     ~StorageCPU() override {if (!m_is_view && m_data_ptr) Forge::cpu_memory_pool().free(m_data_ptr);};
     StorageCPU clone() const;
 
-    void* data() const override {return m_data_ptr;}
+    [[nodiscard]] void* data() const override {return m_data_ptr;}
     T* data_() const {return m_data_ptr;}
     [[nodiscard]] std::size_t nbytes() const override {return m_size*sizeof(T);}
     [[nodiscard]] std::size_t size() const {return m_size;}

@@ -52,6 +52,7 @@ class Forge::Tensor {
     template <typename T, typename U>
     void initialize(const std::initializer_list<U>& init_list);
 public:
+    Tensor() = default;
     explicit Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype = Forge::Dtype::float32, bool need_grads = true,
         Forge::Device device = Forge::Device::CPU);
 
@@ -63,6 +64,8 @@ public:
     Forge::Tensor& operator=(init_list_3D<T>);
     template <TensorStorageType T>
     Forge::Tensor& operator=(init_list_4D<T>);
+
+    Tensor operator[](std::size_t index);
 
     template <typename T>
     Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> as_eigen() const;
@@ -143,6 +146,7 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
 
     std::size_t size {1u};
     for (int i = shape.size()-1; i>=0; i--) {
+        if (shape[i]==0) throw std::invalid_argument("tensor shape must be non-zero");
         m_strides[i] = size;
         size*=m_shape[i];
     }
@@ -180,7 +184,7 @@ void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
 
 
 template<TensorStorageType T>
-inline Forge::Tensor& Forge::Tensor::operator=(init_list_1D<T> init_list) {initialize(init_list);return *this;}
+inline Forge::Tensor& Forge::Tensor::operator=(init_list_1D<T> init_list) {initialize<T>(init_list); return *this;}
 template<TensorStorageType T>
 inline Forge::Tensor& Forge::Tensor::operator=(init_list_2D<T> init_list) {initialize<T>(init_list); return *this;}
 template<TensorStorageType T>
@@ -188,6 +192,25 @@ inline Forge::Tensor& Forge::Tensor::operator=(init_list_3D<T> init_list) {initi
 template<TensorStorageType T>
 inline Forge::Tensor& Forge::Tensor::operator=(init_list_4D<T> init_list) {initialize<T>(init_list); return *this;}
 
+inline Forge::Tensor Forge::Tensor::operator[](std::size_t index) {
+    if (m_shape.empty() || index>=m_shape.front()) throw std::out_of_range(std::format("Index {} is out of bounds", index));
+    std::vector<std::size_t> shape (m_shape.size()-1), strides (m_strides.size()-1);
+    std::copy(m_shape.begin()+1, m_shape.end(), shape.begin());
+    std::copy(m_strides.begin()+1, m_strides.end(), strides.begin());
+
+    Tensor view {};
+    view.m_shape = shape;
+    view.m_strides = strides;
+    view.m_device = m_device;
+    view.m_need_grads = m_need_grads;
+    view.m_dtype = m_dtype;
+    view.m_dispatch_key = m_dispatch_key;
+    view.m_size = shape.empty() ? 1
+    : std::accumulate(shape.begin(), shape.end(), 1ULL, std::multiplies<>());
+    const auto* storageBackend {dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
+    storageBackend->setView(m_storage, view.m_storage, m_strides.front()*index, view.m_size, view.m_dtype);
+    return view;
+}
 
 template <typename T>
 inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
