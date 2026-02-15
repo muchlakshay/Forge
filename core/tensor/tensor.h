@@ -3,9 +3,11 @@
 #include "enums.h"
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"
+#include "tensor/NoCpyPtrWrapper.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
+#include "autograd/node_abstract.h"
 
 namespace Forge {
     class Tensor;
@@ -48,6 +50,7 @@ class Forge::Tensor {
     std::size_t m_size{};
     bool m_need_grads{};
     DispatchKey m_dispatch_key{};
+    Forge::SkipCopyPtr<NodeAbstract> m_node{};
 
     template <typename T, typename U>
     void initialize(const std::initializer_list<U>& init_list);
@@ -221,7 +224,7 @@ inline Forge::Tensor Forge::Tensor::operator[](std::size_t index) {
 }
 
 template <typename T>
-inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
+Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
     Eigen::array<Eigen::Index, 4> eigen_dims;
     eigen_dims.fill(1);
     for (int i{static_cast<int>(m_shape.size()-1)}; i>=0; i--) eigen_dims[i] = m_shape[i];
