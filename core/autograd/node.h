@@ -1,6 +1,7 @@
 #pragma once
 #include "autograd/node_abstract.h"
 #include "tensor/tensor.h"
+#include <type_traits>
 
 namespace Forge {
     template <typename OpClass, std::size_t Parents, ValidEnum OpEnum>
@@ -8,12 +9,16 @@ namespace Forge {
 }
 template <typename OpClass, std::size_t Parents, ValidEnum OpEnum>
 class Forge::Node final : public NodeAbstract {
-    std::array<std::shared_ptr<Tensor>, Parents> m_parents;
+    std::array<std::shared_ptr<Tensor>, Parents> m_parents {};
+    std::shared_ptr<Tensor> m_child{};
     DispatchKey m_dispatch_key {};
-    const Dispatcher<OpClass>& m_dispatcher {};
-    public:
-    explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher) :
-    m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff}, m_dispatcher{dispatcher} {}
+    const Dispatcher<OpEnum>& m_dispatcher {};
+    OpEnum m_op {};
+public:
+    template <typename... ParentTensors>
+    explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher,ParentTensors... parent_tensors) :
+    m_parents{parent_tensors...}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff},
+    m_dispatcher{dispatcher}{
+    }
         void backward() const override;
 };
-
