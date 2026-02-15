@@ -92,6 +92,7 @@ public:
     [[nodiscard]] void* data() const {return m_storage->data();}
     [[nodiscard]] auto size() const {return m_size;}
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
+    [[nodiscard]] auto& node() const {return m_node;}
 };
 
 template <TensorStorageType T>
