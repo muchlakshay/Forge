@@ -16,9 +16,10 @@ class Forge::Node final : public NodeAbstract {
     OpEnum m_op {};
 public:
     template <typename... ParentTensors>
-    explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher,ParentTensors... parent_tensors) :
+    explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher,ParentTensors&&... parent_tensors) :
     m_parents{parent_tensors...}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff},
     m_dispatcher{dispatcher}{
+        static_assert(sizeof...(parent_tensors)<=Parents, "Invalid number of parent tensors passed");
     }
         void backward() const override;
 };
