@@ -74,6 +74,9 @@ public:
 
     static Dispatcher<UtilityOps>& dispatcher();
 
+    template<TensorStorageType T>
+    void setConstant(T constant);
+
     static Tensor Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads=true,
         Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     static Tensor Ones(const std::vector<std::size_t>& shape, bool need_grads=true,
@@ -229,8 +232,15 @@ inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_
 }
 
 
+
+template<TensorStorageType T>
+void Forge::Tensor::setConstant(T constant) {
+    const auto* filler {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, m_dispatch_key)};
+    filler->setConstant(m_storage->data(), m_size, constant, m_dtype);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
-    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::print, tensor.dispatch_key())};
+    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
     return os;
 }
