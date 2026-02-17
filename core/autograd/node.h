@@ -21,7 +21,8 @@ class Forge::Node final : public NodeAbstract {
 public:
     template <typename... ParentTensors>
     explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher,OpEnum op, Tensor& child, ParentTensors&&... parent_tensors) :
-    m_parents{Forge::Tensor{parent_tensors, Forge::NodeContext{}}...}, m_child{child}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff},
+    m_parents{Forge::Tensor{parent_tensors, Forge::NodeContext{}}...}, m_child{child, Forge::NodeContext{}},
+    m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff},
     m_dispatcher{dispatcher}, m_op{op}, m_gradFn{dispatcher.template lookup<OpClass>(op, m_dispatch_key)}{
         static_assert(sizeof...(parent_tensors)<=Parents, "Invalid number of parent tensors passed");
     }
@@ -33,5 +34,5 @@ void Forge::Node<OpClass, Parents, OpEnum>::backward() const {
     [&]<std::size_t...Is>(std::index_sequence<Is...>) {
         m_gradFn->compute_grads(m_parents[Is]..., m_child);
     }(std::make_index_sequence<Parents>{});
-    for (auto& parent : m_parents) {if (parent.node()) parent.backward();}
+    for (auto& parent : m_parents) {if (parent.node()) parent.node()->backward();}
 }
