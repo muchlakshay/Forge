@@ -93,6 +93,8 @@ public:
     [[nodiscard]] auto size() const {return m_size;}
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
     [[nodiscard]] auto& node() const {return m_node;}
+
+    auto& grads() {static std::shared_ptr<Tensor> m_grads; return m_grads;}
 };
 
 template <TensorStorageType T>
