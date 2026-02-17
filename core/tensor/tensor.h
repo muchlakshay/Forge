@@ -3,7 +3,6 @@
 #include "enums.h"
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"
-#include "tensor/NoCpyPtrWrapper.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
@@ -164,6 +163,8 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     m_size = size;
     const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
+
+    if (need_grads) grads() = std::make_shared<Tensor>(shape, Dtype::float32, false, device);
 }
 
 
