@@ -4,6 +4,9 @@
 #include <type_traits>
 
 namespace Forge {
+    template <typename T, typename U>
+    concept isRefTo = std::is_reference_v<U> && std::is_same_v<std::remove_reference_t<U>, T>;
+
     template <typename OpClass, std::size_t Parents, ValidEnum OpEnum>
     class Node;
 }
