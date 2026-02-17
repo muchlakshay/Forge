@@ -97,6 +97,7 @@ public:
     [[nodiscard]] auto& node() const {return m_node;}
 
     auto& grads() {static std::shared_ptr<Tensor> m_grads; return m_grads;}
+    void backward(){grads()->setConstant(1.0f), m_node->backward();};
 };
 
 template <TensorStorageType T>
