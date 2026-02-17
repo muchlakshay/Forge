@@ -176,7 +176,7 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
 inline Forge::Tensor::Tensor(const Tensor &another) : m_device{another.device()}, m_dtype{another.m_dtype},
         m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
         m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key} {
-    if (need_grads) grads() = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+    if (m_need_grads) grads() = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
 }
 
 inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
