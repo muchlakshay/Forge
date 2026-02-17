@@ -101,8 +101,8 @@ public:
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
     [[nodiscard]] auto& node() const {return m_node;}
 
-    auto& grads() {static std::shared_ptr<Tensor> m_grads; return m_grads;}
-    void backward(){grads()->setConstant(1.0f), m_node->backward();};
+    auto& grads() const {static std::shared_ptr<Tensor> m_grads; return m_grads;}
+    void backward() const {grads()->setConstant(1.0f), m_node->backward();};
 };
 
 template <TensorStorageType T>
@@ -183,6 +183,11 @@ inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
     Tensor copy{another};
     *this = std::move(copy);
     return *this;
+}
+
+inline Forge::Tensor::Tensor(const Tensor &another, struct NodeContext) : Tensor(another) {
+    m_node = another.node();
+    grads() = another.grads();
 }
 
 inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,

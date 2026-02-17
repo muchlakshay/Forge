@@ -1,13 +1,10 @@
 #include <iostream>
-#include <vector>
-#include <chrono>
-#include <random>
-#include <cstdlib>
-#include "../core/tensor/Storage/memory_pool_cpu.h"
-#include "../core/ops/Dispatcher/kernel_base.h"
+#include "tensor.h"
 
 
 
 int main() {
+    Forge::Tensor tensor;
+    std::cout<<tensor.size();
     return 0;
 }
