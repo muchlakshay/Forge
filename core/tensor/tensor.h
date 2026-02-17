@@ -52,6 +52,7 @@ class Forge::Tensor {
     bool m_need_grads{};
     DispatchKey m_dispatch_key{};
     std::shared_ptr<NodeAbstract> m_node{};
+    std::shared_ptr<Tensor> m_grads{};
 
     template <typename T, typename U>
     void initialize(const std::initializer_list<U>& init_list);
@@ -102,9 +103,9 @@ public:
     [[nodiscard]] auto& node() const {return m_node;}
     [[nodiscard]] auto& node() {return m_node;}
 
-    [[nodiscard]] auto& grads() const {static std::shared_ptr<Tensor> m_grads; return m_grads;}
+    [[nodiscard]] auto& grads() const {return m_grads;}
     [[nodiscard]] auto& gradients() const {return *(grads());}
-    void backward() const {grads()->setConstant(1.0f), m_node->backward();};
+    void backward() const {grads()->setConstant(1.0f), m_node->backward();}
 };
 
 template <TensorStorageType T>
@@ -171,14 +172,19 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     m_size = size;
     const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
-
-    if (need_grads) grads() = std::make_shared<Tensor>(shape, Dtype::float32, false, device);
+    if (need_grads) {
+        m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+        grads()->setConstant(0.f);
+    }
 }
 
-inline Forge::Tensor::Tensor(const Tensor &another) : m_device{another.device()}, m_dtype{another.m_dtype},
+inline Forge::Tensor::Tensor(const Tensor &another) : m_device{another.m_device}, m_dtype{another.m_dtype},
         m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
         m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key} {
-    if (m_need_grads) grads() = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+    if (m_need_grads) {
+        m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+        grads()->setConstant(0.f);
+    }
 }
 
 inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
@@ -187,9 +193,10 @@ inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
     return *this;
 }
 
-inline Forge::Tensor::Tensor(const Tensor &another, struct NodeContext) : Tensor(another) {
-    m_node = another.node();
-    grads() = another.grads();
+inline Forge::Tensor::Tensor(const Tensor &another, NodeContext) : m_device{another.m_device}, m_dtype{another.m_dtype},
+        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
+        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key}, m_node{another.node()} {
+    m_grads = another.grads();
 }
 
 inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,
