@@ -50,7 +50,7 @@ class Forge::Tensor {
     std::size_t m_size{};
     bool m_need_grads{};
     DispatchKey m_dispatch_key{};
-    Forge::SkipCopyPtr<NodeAbstract> m_node{};
+    std::shared_ptr<NodeAbstract> m_node{};
 
     template <typename T, typename U>
     void initialize(const std::initializer_list<U>& init_list);
@@ -234,7 +234,7 @@ Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen()
 
 
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
-    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::print, tensor.dispatch_key())};
+    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
     return os;
 }
