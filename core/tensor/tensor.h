@@ -106,6 +106,7 @@ public:
     [[nodiscard]] auto& grads() const {return m_grads;}
     [[nodiscard]] auto& gradients() const {return *(grads());}
     void backward() const {grads()->setConstant(1.0f), m_node->backward();}
+    void clear_grads() const {if (m_grads) m_grads->setConstant(0.f);}
 };
 
 template <TensorStorageType T>
