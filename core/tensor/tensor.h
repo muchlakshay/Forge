@@ -103,6 +103,7 @@ public:
     [[nodiscard]] auto& node() {return m_node;}
 
     [[nodiscard]] auto& grads() const {static std::shared_ptr<Tensor> m_grads; return m_grads;}
+    [[nodiscard]] auto& gradients() const {return *(grads());}
     void backward() const {grads()->setConstant(1.0f), m_node->backward();};
 };
 
