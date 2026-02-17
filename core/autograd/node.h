@@ -28,3 +28,11 @@ public:
         void backward() const override;
 };
 
+
+template<typename OpClass, std::size_t Parents, ValidEnum OpEnum>
+void Forge::Node<OpClass, Parents, OpEnum>::backward() const {
+    [&]<std::size_t...Is>(std::index_sequence<Is...>) {
+        m_gradFn->compute_grads(m_parents[Is]..., m_child);
+    }(std::make_index_sequence<Parents>{});
+    for (auto& parent : m_parents) {if (parent.node()) parent.backward();}
+}
