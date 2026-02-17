@@ -30,6 +30,8 @@ namespace Forge {
 
     template<typename T>
     void check_shape_and_throw(const std::initializer_list<T>& init_list, const std::vector<std::size_t>& shape);
+
+    struct NodeContext{};
 }
 
 template <typename T>
@@ -57,6 +59,9 @@ public:
     Tensor() = default;
     explicit Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype = Forge::Dtype::float32, bool need_grads = true,
         Forge::Device device = Forge::Device::CPU);
+    Tensor(const Tensor& another, struct NodeContext);
+    Tensor(const Tensor& another);
+    Tensor& operator=(const Tensor& another);
 
     template <TensorStorageType T>
     Tensor& operator=(init_list_1D<T>);
@@ -168,6 +173,17 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     if (need_grads) grads() = std::make_shared<Tensor>(shape, Dtype::float32, false, device);
 }
 
+inline Forge::Tensor::Tensor(const Tensor &another) : m_device{another.device()}, m_dtype{another.m_dtype},
+        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
+        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key} {
+    if (need_grads) grads() = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+}
+
+inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
+    Tensor copy{another};
+    *this = std::move(copy);
+    return *this;
+}
 
 inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,
     Dtype dtype,Device device) {
@@ -238,8 +254,6 @@ Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen()
     for (int i{static_cast<int>(m_shape.size()-1)}; i>=0; i--) eigen_dims[i] = m_shape[i];
     return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
 }
-
-
 
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
