@@ -92,6 +92,9 @@ public:
     [[nodiscard]] void* data() const {return m_storage->data();}
     [[nodiscard]] auto size() const {return m_size;}
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
+
+    template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
+    Tensor reshape(Dims... dims);
 };
 
 template <TensorStorageType T>
@@ -231,7 +234,23 @@ inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_
     return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
 }
 
+template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
+Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
+    auto size {(1*...*dims)};
+    if (size!=m_size) throw std::invalid_argument(
+        std::format("Invalid Dim Passed: size {} doesnt match to the original {}", size, m_size));
+    size = 1;
 
+    std::vector<std::size_t> new_shape {dims...}, new_strides (new_shape.size());
+    for (int i = new_shape.size()-1; i>=0; --i) {
+        new_strides[i] = size;
+        size*=new_shape[i];
+    }
+    Tensor reshaped {*this};
+    reshaped.m_shape = std::move(new_shape);
+    reshaped.m_strides = std::move(new_strides);
+    return reshaped;
+}
 
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
