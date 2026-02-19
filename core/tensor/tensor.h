@@ -240,6 +240,7 @@ Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
     if (size!=m_size) throw std::invalid_argument(
         std::format("Invalid Dim Passed: size {} doesnt match to the original {}", size, m_size));
     size = 1;
+    if (sizeof...(dims)>4) throw std::invalid_argument("Reshaped tensor rank must be at max 4");
 
     std::vector<std::size_t> new_shape {dims...}, new_strides (new_shape.size());
     for (int i = new_shape.size()-1; i>=0; --i) {
