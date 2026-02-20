@@ -12,6 +12,8 @@ namespace Forge {
     struct InitializeCPU;
     struct PrintAbstract;
     struct PrintCPU;
+    struct StorageCopyAbstract;
+    struct StorageCopyCPU;
 
     using Scalar = std::variant<
     float,
@@ -127,6 +129,12 @@ struct Forge::PrintCPU : public PrintAbstract {
             os << "]";
         }
 };
+
+struct Forge::StorageCopyAbstract : public Kernel {
+    StorageCopyAbstract() : Kernel{ctti::type_id<StorageCopyAbstract>()} {}
+    virtual void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst) = 0;
+};
+
 
 inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) {
     static StorageBackendCPU storageBackendCPU{};
