@@ -132,7 +132,8 @@ struct Forge::PrintCPU : public PrintAbstract {
 
 struct Forge::StorageCopyAbstract : public Kernel {
     StorageCopyAbstract() : Kernel{ctti::type_id<StorageCopyAbstract>()} {}
-    virtual void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst) = 0;
+    virtual void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        Dtype dtype) const = 0;
 };
 
 
