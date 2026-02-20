@@ -95,6 +95,7 @@ public:
 
     template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
     Tensor reshape(Dims... dims);
+    Tensor clone() const;
 };
 
 template <TensorStorageType T>
@@ -257,6 +258,14 @@ template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
     const auto* filler {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, m_dispatch_key)};
     filler->setConstant(m_storage->data(), m_size, constant, m_dtype);
+}
+
+inline Forge::Tensor Forge::Tensor::clone() const {
+    Tensor clone {*this};
+    const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy,
+        m_dispatch_key)};
+    StorageCpy->copy_storage(m_storage, clone.m_storage, m_dtype);
+    return clone;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
