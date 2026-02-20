@@ -136,6 +136,15 @@ struct Forge::StorageCopyAbstract : public Kernel {
         Dtype dtype) const = 0;
 };
 
+struct Forge::StorageCopyCPU final : public StorageCopyAbstract {
+    void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        Dtype dtype) const override {
+        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
+            auto src_downcasted {std::static_pointer_cast<StorageCPU<scalar_t>>(src)};
+            dst = std::make_shared<StorageCPU<scalar_t>>(src_downcasted->clone());
+        });
+    }
+};
 
 inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) {
     static StorageBackendCPU storageBackendCPU{};
