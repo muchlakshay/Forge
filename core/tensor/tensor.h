@@ -6,6 +6,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
+#include "autograd/node_abstract.h"
 
 namespace Forge {
     class Tensor;
@@ -29,6 +30,8 @@ namespace Forge {
 
     template<typename T>
     void check_shape_and_throw(const std::initializer_list<T>& init_list, const std::vector<std::size_t>& shape);
+
+    struct NodeContext{};
 }
 
 template <typename T>
@@ -48,6 +51,8 @@ class Forge::Tensor {
     std::size_t m_size{};
     bool m_need_grads{};
     DispatchKey m_dispatch_key{};
+    std::shared_ptr<NodeAbstract> m_node{};
+    std::shared_ptr<Tensor> m_grads{};
 
     template <typename T, typename U>
     void initialize(const std::initializer_list<U>& init_list);
@@ -55,6 +60,9 @@ public:
     Tensor() = default;
     explicit Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype = Forge::Dtype::float32, bool need_grads = true,
         Forge::Device device = Forge::Device::CPU);
+    Tensor(const Tensor& another, struct NodeContext);
+    Tensor(const Tensor& another);
+    Tensor& operator=(const Tensor& another);
 
     template <TensorStorageType T>
     Tensor& operator=(init_list_1D<T>);
@@ -96,6 +104,13 @@ public:
     template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
     Tensor reshape(Dims... dims);
     Tensor clone() const;
+    [[nodiscard]] auto& node() const {return m_node;}
+    [[nodiscard]] auto& node() {return m_node;}
+
+    [[nodiscard]] auto& grads() const {return m_grads;}
+    [[nodiscard]] auto& gradients() const {return *(grads());}
+    void backward() const {if (m_node) {grads()->setConstant(1.0f), m_node->backward();}}
+    void clear_grads() const {if (m_grads) m_grads->setConstant(0.f);}
 };
 
 template <TensorStorageType T>
@@ -162,8 +177,32 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
     m_size = size;
     const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
+    if (need_grads) {
+        m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+        grads()->setConstant(0.f);
+    }
 }
 
+inline Forge::Tensor::Tensor(const Tensor &another) : m_device{another.m_device}, m_dtype{another.m_dtype},
+        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
+        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key} {
+    if (m_need_grads) {
+        m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
+        grads()->setConstant(0.f);
+    }
+}
+
+inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
+    Tensor copy{another};
+    *this = std::move(copy);
+    return *this;
+}
+
+inline Forge::Tensor::Tensor(const Tensor &another, NodeContext) : m_device{another.m_device}, m_dtype{another.m_dtype},
+        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
+        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key}, m_node{another.node()} {
+    m_grads = another.grads();
+}
 
 inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,
     Dtype dtype,Device device) {
@@ -228,12 +267,13 @@ inline Forge::Tensor Forge::Tensor::operator[](std::size_t index) {
 }
 
 template <typename T>
-inline Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
+Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
     Eigen::array<Eigen::Index, 4> eigen_dims;
     eigen_dims.fill(1);
     for (int i{static_cast<int>(m_shape.size()-1)}; i>=0; i--) eigen_dims[i] = m_shape[i];
     return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
 }
+
 
 template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
 Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
@@ -253,6 +293,7 @@ Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
     reshaped.m_strides = std::move(new_strides);
     return reshaped;
 }
+
 
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
