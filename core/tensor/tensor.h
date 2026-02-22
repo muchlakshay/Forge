@@ -91,6 +91,7 @@ public:
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
+    static Tensor Range(std::size_t start, std::size_t end, std::size_t step=1);
 
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
