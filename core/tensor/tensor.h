@@ -226,13 +226,16 @@ inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape,
 }
 
 template<typename T>
-Forge::Tensor Forge::Tensor::Range(T start, T end, T step) {
+Forge::Tensor Forge::Tensor::Range(T start, T end, T step, bool need_grads, Device device) {
     T value {start};
     std::vector<T> range{};
-    for (;value<end; value+=step) range.push_back(value);
-    for (auto i  : range) {std::cout << i << " ";}
-    Tensor range_tensor
-    return {};
+    for (;!value>end; value+=step) range.push_back(value);
+    Tensor range_tensor {{range.size()}, dtype_of<T>(), need_grads, device};
+    const auto* filler {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers,
+        range_tensor.dispatch_key())};
+    filler->initialize(&range.front(), range_tensor.m_storage->data(), range_tensor.m_dtype,
+        range_tensor.m_dtype, range.size());
+    return range_tensor;
 }
 
 
