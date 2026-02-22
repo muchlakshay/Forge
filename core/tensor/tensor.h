@@ -92,7 +92,7 @@ public:
     static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     template <typename T>
-    static Tensor Range(T start, T end, T step=1);
+    static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
 
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
@@ -224,6 +224,17 @@ inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape,
     Dtype dtype, Device device) {
     return Constant(shape, 0, need_grads, dtype, device);
 }
+
+template<typename T>
+Forge::Tensor Forge::Tensor::Range(T start, T end, T step) {
+    T value {start};
+    std::vector<T> range{};
+    for (;value<end; value+=step) range.push_back(value);
+    for (auto i  : range) {std::cout << i << " ";}
+    Tensor range_tensor
+    return {};
+}
+
 
 template <TensorStorageType T>
 Forge::Tensor& Forge::Tensor::operator=(T val){
