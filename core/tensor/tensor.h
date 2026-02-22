@@ -91,7 +91,8 @@ public:
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
-    static Tensor Range(std::size_t start, std::size_t end, std::size_t step=1);
+    template <typename T>
+    static Tensor Range(T start, T end, T step=1);
 
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
@@ -104,7 +105,7 @@ public:
 
     template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
     Tensor reshape(Dims... dims);
-    Tensor clone() const;
+    [[nodiscard]] Tensor clone() const;
     [[nodiscard]] auto& node() const {return m_node;}
     [[nodiscard]] auto& node() {return m_node;}
 
@@ -112,6 +113,7 @@ public:
     [[nodiscard]] auto& gradients() const {return *(grads());}
     void backward() const {if (m_node) {grads()->setConstant(1.0f), m_node->backward();}}
     void clear_grads() const {if (m_grads) m_grads->setConstant(0.f);}
+
 };
 
 template <TensorStorageType T>
