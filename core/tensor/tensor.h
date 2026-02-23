@@ -178,7 +178,7 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
         size*=m_shape[i];
     }
     m_size = size;
-    const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
+    static const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
     if (need_grads) {
         m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
@@ -210,7 +210,7 @@ inline Forge::Tensor::Tensor(const Tensor &another, NodeContext) : m_device{anot
 inline Forge::Tensor Forge::Tensor::Constant(const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads,
     Dtype dtype,Device device) {
     Tensor tensor(shape, dtype, need_grads, device);
-    auto* constAbstract {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, tensor.m_dispatch_key)};
+    static const auto* constAbstract {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, tensor.m_dispatch_key)};
     constAbstract->setConstant(tensor.data(), tensor.size(), constant, dtype);
     return tensor;
 }
@@ -229,9 +229,9 @@ template<typename T>
 Forge::Tensor Forge::Tensor::Range(T start, T end, T step, bool need_grads, Device device) {
     T value {start};
     std::vector<T> range{};
-    for (;!value>end; value+=step) range.push_back(value);
+    for (;value<end; value+=step) range.push_back(value);
     Tensor range_tensor {{range.size()}, dtype_of<T>(), need_grads, device};
-    const auto* filler {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers,
+    static const auto* filler {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers,
         range_tensor.dispatch_key())};
     filler->initialize(&range.front(), range_tensor.m_storage->data(), range_tensor.m_dtype,
         range_tensor.m_dtype, range.size());
@@ -241,7 +241,7 @@ Forge::Tensor Forge::Tensor::Range(T start, T end, T step, bool need_grads, Devi
 
 template <TensorStorageType T>
 Forge::Tensor& Forge::Tensor::operator=(T val){
-    const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
+    static const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
     initializer->initialize(&val, m_storage->data(), dtype_of<T>(), m_dtype, 1);
     return *this;
 }
@@ -250,7 +250,7 @@ template<typename T, typename U>
 void Forge::Tensor::initialize(const std::initializer_list<U> &init_list) {
     check_shape_and_throw(init_list, m_shape);
     auto flattened_list {flatten_list<T>(init_list)};
-    const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
+    static const auto* initializer {dispatcher().lookup<InitializeAbstract>(UtilityOps::initializers, m_dispatch_key)};
     initializer->initialize(flattened_list.data(), m_storage->data(), dtype_of<T>(), m_dtype, m_size);
 }
 
@@ -278,7 +278,7 @@ inline Forge::Tensor Forge::Tensor::operator[](std::size_t index) {
     view.m_dispatch_key = m_dispatch_key;
     view.m_size = shape.empty() ? 1
     : std::accumulate(shape.begin(), shape.end(), 1ULL, std::multiplies<>());
-    const auto* storageBackend {dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
+    static const auto* storageBackend {dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storageBackend->setView(m_storage, view.m_storage, m_strides.front()*index, view.m_size, view.m_dtype);
     return view;
 }
@@ -314,20 +314,20 @@ Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
 
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
-    const auto* filler {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, m_dispatch_key)};
+    static const auto* filler {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, m_dispatch_key)};
     filler->setConstant(m_storage->data(), m_size, constant, m_dtype);
 }
 
 inline Forge::Tensor Forge::Tensor::clone() const {
     Tensor clone {*this};
-    const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy,
+    static const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy,
         m_dispatch_key)};
     StorageCpy->copy_storage(m_storage, clone.m_storage, m_dtype);
     return clone;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
-    const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
+    static const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
     return os;
 }
