@@ -227,6 +227,22 @@ inline Forge::Tensor Forge::Tensor::Zeros(const std::vector<std::size_t>& shape,
     return Constant(shape, 0, need_grads, dtype, device);
 }
 
+template<TensorStorageType T>
+Forge::Tensor Forge::Tensor::FromHostPtr(T *host_ptr, const std::vector<std::size_t> &shape,
+    bool need_grads) {
+    Tensor tensor {};
+    tensor.m_shape = shape; tensor.m_strides.resize(shape.size());
+    std::size_t size {1u};
+    for (int i = shape.size()-1; i>=0; i--) {
+        if (shape[i]==0) throw std::invalid_argument("tensor shape must be non-zero");
+        tensor.m_strides[i] = size;
+        size*=tensor.m_shape[i];
+    }
+    tensor.m_size = size; tensor.m_dtype = dtype_of<T>(); tensor.m_need_grads = need_grads;
+    tensor.m_storage = std::make_shared<StorageCPU<T>>(host_ptr, 0, size);
+    return tensor;
+}
+
 template<typename T>
 Forge::Tensor Forge::Tensor::Range(T start, T end, T step, bool need_grads, Device device) {
     T value {start};
