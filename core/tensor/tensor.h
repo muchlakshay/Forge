@@ -92,7 +92,7 @@ public:
     static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     template <TensorStorageType T>
-    static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, const Scalar& constant, bool need_grads=true,
+    static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32);
     template <typename T>
     static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
