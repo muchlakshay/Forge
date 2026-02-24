@@ -92,8 +92,7 @@ public:
     static Tensor Zeros(const std::vector<std::size_t>& shape, bool need_grads=true,
     Dtype dtype=Dtype::float32 ,Device device=Device::CPU);
     template <TensorStorageType T>
-    static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, bool need_grads=true,
-    Dtype dtype=Dtype::float32);
+    static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, bool need_grads=true);
     template <typename T>
     static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
 
@@ -203,7 +202,6 @@ inline Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
     *this = std::move(copy);
     return *this;
 }
-
 
 inline Forge::Tensor::Tensor(const Tensor &another, NodeContext) : m_device{another.m_device}, m_dtype{another.m_dtype},
         m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
