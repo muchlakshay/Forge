@@ -349,6 +349,7 @@ inline Forge::Tensor Forge::Tensor::clone() const {
 inline void Forge::Tensor::copy(const Tensor& another) {
     if (another.m_shape!=m_shape) throw std::invalid_argument("argument Tensor shapes is different");
     if (another.m_device!=m_device) throw std::invalid_argument("argument Tensor resides on different device");
+    if (another.m_dtype!=m_dtype) throw std::invalid_argument("argument Tensor have different dtype");
     static const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy, m_dispatch_key)};
     StorageCpy->copy_storage(another.m_storage, m_storage, m_dtype);
 }
