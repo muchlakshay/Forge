@@ -346,6 +346,13 @@ inline Forge::Tensor Forge::Tensor::clone() const {
     return clone;
 }
 
+inline void Forge::Tensor::copy(const Tensor& another) {
+    if (another.m_shape!=m_shape) throw std::invalid_argument("argument Tensor shapes is different");
+    if (another.m_device!=m_device) throw std::invalid_argument("argument Tensor resides on different device");
+    static const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy, m_dispatch_key)};
+    StorageCpy->copy_storage(another.m_storage, m_storage, m_dtype);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
     static const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
