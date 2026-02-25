@@ -96,6 +96,8 @@ public:
     template <typename T>
     static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
 
+    void copy(const Tensor& another);
+
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
     [[nodiscard]] const auto& strides() const {return m_strides;} ;
