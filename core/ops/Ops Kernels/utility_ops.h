@@ -12,6 +12,8 @@ namespace Forge {
     struct InitializeCPU;
     struct PrintAbstract;
     struct PrintCPU;
+    struct StorageCopyAbstract;
+    struct StorageCopyCPU;
 
     using Scalar = std::variant<
     float,
@@ -128,13 +130,31 @@ struct Forge::PrintCPU : public PrintAbstract {
         }
 };
 
+struct Forge::StorageCopyAbstract : public Kernel {
+    StorageCopyAbstract() : Kernel{ctti::type_id<StorageCopyAbstract>()} {}
+    virtual void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        Dtype dtype) const = 0;
+};
+
+struct Forge::StorageCopyCPU final : public StorageCopyAbstract {
+    void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
+        Dtype dtype) const override {
+        DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
+            auto src_downcasted {std::static_pointer_cast<StorageCPU<scalar_t>>(src)};
+            dst = std::make_shared<StorageCPU<scalar_t>>(src_downcasted->clone());
+        });
+    }
+};
+
 inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) {
     static StorageBackendCPU storageBackendCPU{};
     static ConstantCPU constantCPU{};
     static InitializeCPU initializeCPU{};
     static PrintCPU printCPU{};
+    static StorageCopyCPU storageCopyCPU{};
     dispatcher.register_kernel<StorageBackend>(&storageBackendCPU, UtilityOps::storage_backend, DispatchKey::CPU);
     dispatcher.register_kernel<ConstantAbstract>(&constantCPU, UtilityOps::constant, DispatchKey::CPU);
     dispatcher.register_kernel<InitializeAbstract>(&initializeCPU, UtilityOps::initializers, DispatchKey::CPU);
     dispatcher.register_kernel<PrintAbstract>(&printCPU, UtilityOps::print, DispatchKey::CPU);
+    dispatcher.register_kernel<StorageCopyAbstract>(&storageCopyCPU, UtilityOps::storage_copy, DispatchKey::CPU);
 }

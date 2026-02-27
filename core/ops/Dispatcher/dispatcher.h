@@ -66,7 +66,7 @@ public:
     template <KernelDerived U>
     void register_kernel(U* func_class, T op, DispatchKey dispatch_key);
     template <KernelDerived U>
-     U* lookup(T op, DispatchKey dispatch_key);
+     U* lookup(T op, DispatchKey dispatch_key) const;
 };
 
 template <ValidEnum T>
@@ -79,7 +79,7 @@ inline void Forge::Dispatcher<T>::register_kernel(U* func_class, T op, DispatchK
 
 template <ValidEnum T>
 template<KernelDerived U>
-inline U* Forge::Dispatcher<T>::lookup(T op, DispatchKey dispatch_key) {
+inline U* Forge::Dispatcher<T>::lookup(T op, DispatchKey dispatch_key) const {
     Kernel* kernel {m_registry[to_idx(op)][to_idx(dispatch_key)]};
     if (kernel==nullptr)
         throw std::invalid_argument("Kernel not registered");
