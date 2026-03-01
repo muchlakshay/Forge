@@ -107,6 +107,7 @@ public:
     [[nodiscard]] void* data() const {return m_storage->data();}
     [[nodiscard]] auto size() const {return m_size;}
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
+    [[nodiscard]] const auto& storage() const {return m_storage;}
 
     template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
     Tensor reshape(Dims... dims);
