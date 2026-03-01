@@ -1,4 +1,5 @@
 #pragma once
+#include <random>
 #include "primitive_dispatcher.h"
 #include "Storage/storage_abstract.h"
 
@@ -13,3 +14,9 @@ struct Forge::WeightsInitAbstract : Kernel {
     virtual void initialize(std::shared_ptr<StorageAbstract>& weights, Initializers initializer) const = 0;
 };
 
+struct Forge::WeightsInitCPU : WeightsInitAbstract {
+    void initialize(std::shared_ptr<StorageAbstract> &weights, Initializers initializer) const override {
+        std::random_device device;
+        std::mt19937 mt{ device() };
+    }
+};
