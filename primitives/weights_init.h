@@ -17,6 +17,12 @@ struct Forge::WeightsInitAbstract : Kernel {
 struct Forge::WeightsInitCPU : WeightsInitAbstract {
     void initialize(std::shared_ptr<StorageAbstract> &weights, Initializers initializer) const override {
         std::random_device device;
-        std::mt19937 mt{ device() };
+        std::mt19937_64 mt{ device() };
+
+        auto fill {
+            [&](auto& storage, auto& dist) {
+                for (std::size_t i {}; i<storage->size(); ++i) storage[i] = dist(mt);
+            }
+        };
     }
 };
