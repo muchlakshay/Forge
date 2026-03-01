@@ -11,11 +11,13 @@ namespace Forge {
 
 struct Forge::WeightsInitAbstract : Kernel {
     WeightsInitAbstract() : Kernel{ctti::type_id<WeightsInitAbstract>()} {}
-    virtual void initialize(std::shared_ptr<StorageAbstract>& weights, Initializers initializer) const = 0;
+    virtual void initialize(std::shared_ptr<StorageAbstract>& weights, std::size_t input_size, std::size_t output_size,
+        Initializers initializer) const = 0;
 };
 
 struct Forge::WeightsInitCPU : WeightsInitAbstract {
-    void initialize(std::shared_ptr<StorageAbstract> &weights, Initializers initializer) const override {
+    void initialize(std::shared_ptr<StorageAbstract>& weights, std::size_t input_size, std::size_t output_size,
+        Initializers initializer) const override {
         std::random_device device;
         std::mt19937_64 mt{ device() };
 
@@ -24,5 +26,6 @@ struct Forge::WeightsInitCPU : WeightsInitAbstract {
                 for (std::size_t i {}; i<storage->size(); ++i) storage[i] = dist(mt);
             }
         };
+
     }
 };
