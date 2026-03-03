@@ -62,7 +62,9 @@ public:
         Forge::Device device = Forge::Device::CPU);
     Tensor(const Tensor& another, struct NodeContext);
     Tensor(const Tensor& another);
+    Tensor(Tensor&& another) = default;
     Tensor& operator=(const Tensor& another);
+    Tensor& operator=(Tensor&& another) = default;
 
     template <TensorStorageType T>
     Tensor& operator=(init_list_1D<T>);
@@ -104,7 +106,7 @@ public:
     [[nodiscard]] const auto& strides() const {return m_strides;} ;
     [[nodiscard]] const auto& dtype() const {return m_dtype;} ;
     [[nodiscard]] const auto& device() const {return m_device;} ;
-    [[nodiscard]] void* data() const {return m_storage->data();}
+    [[nodiscard]] void* data() const {return m_storage?m_storage->data():nullptr;}
     [[nodiscard]] auto size() const {return m_size;}
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
     [[nodiscard]] const auto& storage() const {return m_storage;}
@@ -184,11 +186,11 @@ inline Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype
         size*=m_shape[i];
     }
     m_size = size;
-    static const auto storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
+    static const auto* storage_backend { dispatcher().lookup<StorageBackend>(UtilityOps::storage_backend, m_dispatch_key)};
     storage_backend->getStorageBackend(m_storage, size, m_dtype);
     if (need_grads) {
         m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
-        grads()->setConstant(0.f);
+        m_grads->setConstant(0.f);
     }
 }
 
