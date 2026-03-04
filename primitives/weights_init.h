@@ -46,14 +46,14 @@ struct Forge::WeightsInitCPU : WeightsInitAbstract {
         } else if (initializer == Initializers::xavier_uniform) {
             const auto limit = std::sqrt(6.0 / (input_size + output_size));
             std::uniform_real_distribution distribution(-limit, limit);
-            fill(distribution, weights);
+            fill(weights, distribution);
         } else if (initializer == Initializers::he_normal) {
             std::normal_distribution<> distribution(0, std::sqrt(2.0 / input_size));
-            fill(distribution, weights);
+            fill(weights, distribution);
         } else if (initializer == Initializers::he_uniform) {
-            float limit = std::sqrt(6.0 / input_size);
+            auto limit = std::sqrt(6.0 / input_size);
             std::uniform_real_distribution distribution(-limit, limit);
-            fill(distribution, weights);
+            fill(weights, distribution);
         } else throw std::invalid_argument("Invalid initializer Type");
     }
 };
