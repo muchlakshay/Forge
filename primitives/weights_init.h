@@ -2,6 +2,7 @@
 #include <random>
 #include "ops/Dispatcher/kernel_base.h"
 #include "tensor.h"
+#include "primitive_dispatcher.h"
 
 namespace Forge {
     enum class Initializers{xavier_normal, xavier_uniform, he_normal, he_uniform};
@@ -30,6 +31,21 @@ struct Forge::WeightsInitCPU : WeightsInitAbstract {
                             casted_ptr[i] = static_cast<scalar_t>(dist(mt));
                     });}
         };
+
+        if (initializer == Initializers::xavier_normal) {
+            std::normal_distribution<> distribution(0, std::sqrt(1.0 / input_size));
+            fill(weights, distribution);
+        } else if (initializer == Initializers::xavier_uniform) {
+            const auto limit = std::sqrt(6.0 / (input_size + output_size));
+            std::uniform_real_distribution distribution(-limit, limit);
+            fill(distribution, weights);
+        } else if (initializer == Initializers::he_normal) {
+            std::normal_distribution<> distribution(0, std::sqrt(2.0 / input_size));
+            fill(distribution, weights);
+        } else if (initializer == Initializers::he_uniform) {
+            float limit = std::sqrt(6.0 / input_size);
+            std::uniform_real_distribution distribution(-limit, limit);
+            fill(distribution, weights);
+        } else throw std::invalid_argument("Invalid initializer Type");
     }
 };
-
