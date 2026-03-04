@@ -17,6 +17,14 @@ struct Forge::WeightsInitAbstract : Kernel {
 };
 
 struct Forge::WeightsInitCPU : WeightsInitAbstract {
+    WeightsInitCPU() {
+        static bool registered {};
+        if (!registered) {
+            primitive_dispatcher().register_kernel<WeightsInitAbstract>(
+            this, primitive_ops::weightsInit, DispatchKey::CPU);
+            registered = true;
+        }
+    }
     void initialize(Tensor& weights, std::size_t input_size, std::size_t output_size,
         Initializers initializer) const override {
         std::random_device device;
@@ -49,3 +57,9 @@ struct Forge::WeightsInitCPU : WeightsInitAbstract {
         } else throw std::invalid_argument("Invalid initializer Type");
     }
 };
+
+namespace Forge {
+    namespace PrimitivesObjs {
+        static WeightsInitCPU weights_init_cpu{};
+    }
+}
