@@ -41,3 +41,17 @@ inline Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, In
        primitive_ops::weightsInit, DispatchKey::CPU)};
     weight_initializer->initialize(m_weights, input_size, output_size, initializer);
 }
+
+
+inline Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
+    if (input.dtype()!=m_dtype) throw std::invalid_argument("input tensor and Layer weights have different dtypes");
+    if (auto inp_cols{input.shape()[input.size()-1]}; inp_cols == m_input_size) throw std::invalid_argument(
+        std::format("invalid input tensor shape. Expected: {}, Got: {}", m_input_size, inp_cols));
+
+    const auto* forward_fn {primitive_dispatcher().lookup<LinearAbstract>(primitive_ops::linear, m_dispatch_key)};
+    auto output_shape {input.shape()};
+    output_shape.back() = m_output_size;
+    Tensor output {{output_shape}, m_dtype, input.need_grads(), m_device};
+    forward_fn->forward(input, output, m_weights, m_bias, m_using_bias);
+    return output;
+}
