@@ -91,6 +91,7 @@ struct Forge::PrintAbstract : public Forge::Kernel {
 struct Forge::PrintCPU : public PrintAbstract {
     void print(const void* data_ptr, const std::vector<std::size_t>& shape, const std::vector<std::size_t>& strides,
         Dtype dtype, std::ostream& os) const override {
+        if (!data_ptr){std::cout<<"Tensor([])"; return;}
         if (shape.empty()) {
             DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {os << "Tensor(["<<*static_cast<const scalar_t*>(data_ptr)<<"])";});
             return;
