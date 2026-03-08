@@ -20,6 +20,13 @@ struct Forge::LinearCPU final : LinearAbstract {
             Eigen::array<Eigen::IndexPair<std::size_t>, 1> contraction_dims {Eigen::IndexPair<std::size_t>(3, 2)};
             output_map = input_map.contract(transposed_weights,
                 contraction_dims).reshape(output_map.dimensions());
+
+            if (using_bias) {
+                auto bias_map    { bias.as_eigen<scalar_t>() };
+                auto opt_dims {output_map.dimensions()};
+                Eigen::array<Eigen::Index , 4> broadcast_dims {opt_dims[0], opt_dims[1], opt_dims[2], 1};
+                output_map+=bias_map.broadcast(broadcast_dims);
+            }
         });
     }
 };
