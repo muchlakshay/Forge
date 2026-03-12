@@ -1,7 +1,9 @@
 #pragma once
 #include "tensor/tensor.h"
-#include "primitive_dispatcher.h"
-#include "weights_init.h"
+#include "../Dispatcher/primitive_dispatcher.h"
+#include "../weights_init.h"
+#include "autograd/attach_node.h"
+#include "LinearGradsAbstract.h"
 
 namespace Forge {
     class Linear;
@@ -45,7 +47,7 @@ inline Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, In
 
 inline Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
     if (input.dtype()!=m_dtype) throw std::invalid_argument("input tensor and Layer weights have different dtypes");
-    if (auto inp_cols{input.shape()[input.size()-1]}; inp_cols == m_input_size) throw std::invalid_argument(
+    if (auto inp_cols{input.shape().back()}; inp_cols != m_input_size) throw std::invalid_argument(
         std::format("invalid input tensor shape. Expected: {}, Got: {}", m_input_size, inp_cols));
 
     const auto* forward_fn {primitive_dispatcher().lookup<LinearAbstract>(primitive_ops::linear, m_dispatch_key)};
@@ -53,5 +55,6 @@ inline Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
     output_shape.back() = m_output_size;
     Tensor output {{output_shape}, m_dtype, input.need_grads(), m_device};
     forward_fn->forward(input, output, m_weights, m_bias, m_using_bias);
+
     return output;
 }
