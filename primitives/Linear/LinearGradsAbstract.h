@@ -8,5 +8,5 @@ namespace Forge {
 
 struct Forge::LinearGradsAbstract : Kernel {
     LinearGradsAbstract() : Kernel {ctti::type_id<LinearGradsAbstract>()} {}
-    virtual void backward(Tensor& input, Tensor& weights, Tensor& bias, const Tensor& output) const = 0;
+    virtual void compute_grads(Tensor& input, Tensor& weights, Tensor& bias, const Tensor& output) const = 0;
 };
