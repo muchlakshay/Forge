@@ -23,7 +23,7 @@ struct Forge::RegisterPrimitives {
 };
 
 namespace Forge {
-    static RegisterPrimitives __;
+    static RegisterPrimitives prim_rej;
 }
 
 
