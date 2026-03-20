@@ -119,7 +119,7 @@ public:
 
     [[nodiscard]] auto& grads() const {return m_grads;}
     [[nodiscard]] auto& gradients() const {return *(grads());}
-    void backward() const {if (m_node) {grads()->setConstant(1.0f), m_node->backward();}}
+    void backward() const {if (m_node) {grads()->setConstant(1.0f); m_node->backward();}}
     void clear_grads() const {if (m_grads) m_grads->setConstant(0.f);}
 
 };
@@ -339,6 +339,7 @@ Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
     const auto* filler {dispatcher().lookup<ConstantAbstract>(UtilityOps::constant, m_dispatch_key)};
+    // if (!(m_storage->data())) std::cout<<"null\n";
     filler->setConstant(m_storage->data(), m_size, constant, m_dtype);
 }
 
