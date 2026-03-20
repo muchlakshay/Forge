@@ -1,7 +1,7 @@
 #pragma once
 
-#include "primitive_dispatcher.h"
 #include "primitives.h"
+#include "primitive_dispatcher.h"
 
 namespace  Forge {
     struct RegisterPrimitives;
@@ -17,13 +17,13 @@ struct Forge::RegisterPrimitives {
             DispatchKey::CPU);
         primitive_dispatcher().register_kernel<WeightsInitCPU>(&weights_init_cpu, primitive_ops::weightsInit,
             DispatchKey::CPU);
-        primitive_dispatcher().register_kernel<LinearGradsAbstract>(&linear_grads_cpu, primitive_ops::linear_grads,
-            DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<LinearGradsAbstract>(&linear_grads_cpu, primitive_ops::linear,
+            DispatchKey::CPU_Autodiff);
     }
 };
 
 namespace Forge {
-    static RegisterPrimitives prim_rej;
+    static RegisterPrimitives prim_reg;
 }
 
 
