@@ -41,6 +41,11 @@ struct Forge::LinearGradsCPU final :  LinearGradsAbstract {
                         Eigen::array<Eigen::Index, 2>{1, 0}).contract(input_map_2D.template cast<grads_t>(), dims)
                         ).reshape(weights_grads_map.dimensions());
             }
+            if (bias.need_grads()) {
+                auto bias_grads_map {bias.gradients().as_eigen<grads_t>()};
+                Eigen::array<Eigen::Index, 3> reduction_axis {0, 1, 2};
+                bias_grads_map+=output_grads_map.sum(reduction_axis).reshape(bias_grads_map.dimensions());
+            }
         });
     }
 };
