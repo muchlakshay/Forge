@@ -23,6 +23,24 @@ struct Forge::LinearGradsCPU final :  LinearGradsAbstract {
                 contraction_dims).reshape(input_grads_map.dimensions());
             }
 
+            if (weights.need_grads()) {
+                auto weights_grads_map {weights.gradients().as_eigen<grads_t>()};
+                auto input_map {input.as_eigen<scalar_t>()};
+
+                auto X {output_grads_map.dimension(0)}, Y {output_grads_map.dimension(1)};
+                auto batch_size {output_grads_map.dimension(2)}, output_size {output_grads_map.dimension(3)};
+                auto input_size {input_map.dimension(3)};
+
+                auto output_grads_map_2D {output_grads_map.reshape(Eigen::array<Eigen::Index, 2>{X*Y*batch_size, output_size})};
+                auto input_map_2D {input_map.reshape(Eigen::array<Eigen::Index, 2>{X*Y*batch_size, input_size})};
+
+                Eigen::array dims {Eigen::IndexPair<std::size_t>(1, 0)};
+
+                weights_grads_map += (
+                    output_grads_map_2D.shuffle(
+                        Eigen::array<Eigen::Index, 2>{1, 0}).contract(input_map_2D.template cast<grads_t>(), dims)
+                        ).reshape(weights_grads_map.dimensions());
+            }
         });
     }
 };
