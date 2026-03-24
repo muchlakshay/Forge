@@ -20,3 +20,14 @@ struct Forge::ReluCPU : ReluAbstract{
         });
     }
 };
+
+struct Forge::SigmoidCPU : SigmoidAbstract{
+    void forward(const Tensor& input, Tensor& output) override {
+        DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
+            auto input_map {input.as_eigen<scalar_t>()};
+            auto output_map {output.as_eigen<scalar_t>()};
+            auto one {static_cast<scalar_t>(1)};
+            output_map = one/(one+((-input_map).exp()));
+        });
+    }
+};
