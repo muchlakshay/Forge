@@ -9,6 +9,7 @@ namespace Forge {
     struct SoftmaxAbstract;
     struct TanhAbstract;
     struct LeakyReluAbstract;
+    struct GeluAbstract;
 }
 
 struct Forge::ReluAbstract : Kernel{
@@ -33,5 +34,10 @@ struct Forge::TanhAbstract : Kernel{
 
 struct Forge::LeakyReluAbstract : Kernel{
     LeakyReluAbstract() : Kernel{ctti::type_id<LeakyReluAbstract>()}{}
+    virtual void forward(const Tensor& input, Tensor& output) = 0;
+};
+
+struct Forge::GeluAbstract : Kernel {
+  GeluAbstract() : Kernel{ctti::type_id<GeluAbstract>()}{}
     virtual void forward(const Tensor& input, Tensor& output) = 0;
 };
