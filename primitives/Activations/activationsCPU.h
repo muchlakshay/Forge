@@ -2,6 +2,7 @@
 
 #include "activationsAbstarct.h"
 #include "activationsCPU.h"
+#include "activationsCPU.h"
 
 namespace Forge {
     struct ReluCPU;
@@ -31,3 +32,25 @@ struct Forge::SigmoidCPU : SigmoidAbstract{
         });
     }
 };
+
+struct Forge::TanhCPU : TanhAbstract {
+    void forward(const Tensor& input, Tensor& output) override {
+        DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
+            auto input_map {input.as_eigen<scalar_t>()};
+            auto output_map {output.as_eigen<scalar_t>()};
+            output_map = (input_map.exp() - (-input_map.exp()))/(input_map.exp() + (-input_map.exp()));
+        });
+    }
+};
+
+struct Forge::LeakyReluCPU : LeakyReluAbstract {
+    void forward(const Tensor& input, Tensor& output) override {
+        DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
+            auto input_map {input.as_eigen<scalar_t>()};
+            auto output_map {output.as_eigen<scalar_t>()};
+            auto alpha {static_cast<scalar_t>(0.01)};
+            output_map = (input_map > scalar_t(0)).select(input_map, alpha * input_map);
+        });
+    }
+};
+
