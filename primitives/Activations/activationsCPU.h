@@ -2,7 +2,6 @@
 
 #include "activationsAbstarct.h"
 #include "activationsCPU.h"
-#include "activationsCPU.h"
 
 namespace Forge {
     struct ReluCPU;
@@ -39,7 +38,7 @@ struct Forge::TanhCPU : TanhAbstract {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
-            output_map = (input_map.exp() - (-input_map.exp()))/(input_map.exp() + (-input_map.exp()));
+            output_map = input_map.tanh();
         });
     }
 };
