@@ -1,7 +1,6 @@
 #pragma once
 
 #include "activationsAbstarct.h"
-#include "activationsCPU.h"
 
 namespace Forge {
     struct ReluCPU;
