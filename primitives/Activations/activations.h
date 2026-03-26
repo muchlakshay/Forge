@@ -56,3 +56,12 @@ class Forge::Gelu {
         return output;
     }
 };
+
+class Forge::Sigmoid {
+    Tensor operator()(const Tensor& input) const {
+        Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
+        const auto* sigmoid {primitive_dispatcher().lookup<SigmoidAbstract>(primitive_ops::sigmoid, input.dispatch_key())};
+        sigmoid->forward(input, output);
+        return output;
+    }
+};
