@@ -30,3 +30,12 @@ class Forge::Softmax {
     }
 };
 
+class Forge::LeakyRelu {
+    Tensor operator()(const Tensor& input) const {
+        Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
+        const auto* leaky_relu {primitive_dispatcher().lookup<LeakyReluAbstract>(primitive_ops::leaky_relu, input.dispatch_key())};
+        leaky_relu->forward(input, output);
+        return output;
+    }
+};
+
