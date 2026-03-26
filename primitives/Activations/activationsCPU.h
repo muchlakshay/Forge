@@ -13,7 +13,7 @@ namespace Forge {
 }
 
 struct Forge::ReluCPU : ReluAbstract{
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
            auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
@@ -23,7 +23,7 @@ struct Forge::ReluCPU : ReluAbstract{
 };
 
 struct Forge::SigmoidCPU : SigmoidAbstract{
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
@@ -34,7 +34,7 @@ struct Forge::SigmoidCPU : SigmoidAbstract{
 };
 
 struct Forge::TanhCPU : TanhAbstract {
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
@@ -44,7 +44,7 @@ struct Forge::TanhCPU : TanhAbstract {
 };
 
 struct Forge::LeakyReluCPU : LeakyReluAbstract {
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
@@ -55,7 +55,7 @@ struct Forge::LeakyReluCPU : LeakyReluAbstract {
 };
 
 struct Forge::GeluCPU : GeluAbstract {
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
@@ -72,7 +72,7 @@ struct Forge::GeluCPU : GeluAbstract {
 };
 
 struct Forge::SoftmaxCPU : SoftmaxAbstract {
-    void forward(const Tensor& input, Tensor& output) override {
+    void forward(const Tensor& input, Tensor& output) const override {
         DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
             auto input_map {input.as_eigen<scalar_t>()};
             auto output_map {output.as_eigen<scalar_t>()};
