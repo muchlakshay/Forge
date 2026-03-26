@@ -3,11 +3,11 @@
 
 namespace Forge {
     struct ReluGradsCPU;
-    struct SigmoidCPU;
     struct LeakyReluGradsCPU;
     struct SoftmaxGradsCPU;
     struct GeluGradsCPU;
     struct SigmoidGradsCPU;
+    struct TanhGradsCPU;
 }
 
 struct Forge::ReluGradsCPU : ReluGradsAbstract {
@@ -74,6 +74,18 @@ struct Forge::SoftmaxGradsCPU : SoftmaxGradsAbstract {
             auto dot_reshaped {dot.reshape(reshape_dims)};
             Eigen::array<Eigen::Index, 4> broadcast_dims {1, 1, 1, dims[3]};
             logits_grads_map += act_map * (act_grads_map-dot_reshaped.broadcast(broadcast_dims));
+        });
+    }
+};
+
+struct Forge::SigmoidGradsCPU : SigmoidGradsAbstract {
+    void compute_grads(const Tensor& preactivations, const Tensor& activations) const override {
+        DISPATCH_ALL_TYPES(preactivations.dtype(), Device::CPU, [&] {
+            auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
+            auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
+            auto act_map{activations.as_eigen<scalar_t>()};
+
+            preact_grads_map += act_grads_map * (act_map*(static_cast<scalar_t>(1)-act_map));
         });
     }
 };
