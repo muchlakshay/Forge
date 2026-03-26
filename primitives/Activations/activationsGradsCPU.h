@@ -57,3 +57,23 @@ struct Forge::GeluGradsCPU : GeluGradsAbstract {
         });
     }
 };
+
+struct Forge::SoftmaxGradsCPU : SoftmaxGradsAbstract {
+    void compute_grads(const Tensor& logits, const Tensor& activations) const override {
+        DISPATCH_ALL_TYPES(logits.dtype(), Device::CPU, [&] {
+            auto logits_grads_map {logits.gradients().as_eigen<scalar_t>()};
+            auto act_map {activations.as_eigen<scalar_t>()};
+            auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
+
+            auto act_mul_act_grads {act_grads_map*act_map};
+            Eigen::array<Eigen::Index, 1> reduce_axis {3};
+            auto dims {act_map.dimensions()};
+            auto dot {act_mul_act_grads.sum(reduce_axis)};
+            Eigen::array<Eigen::Index, 4> reshape_dims {dims[0], dims[1], dims[2], 1};
+
+            auto dot_reshaped {dot.reshape(reshape_dims)};
+            Eigen::array<Eigen::Index, 4> broadcast_dims {1, 1, 1, dims[3]};
+            logits_grads_map += act_map * (act_grads_map-dot_reshaped.broadcast(broadcast_dims));
+        });
+    }
+};

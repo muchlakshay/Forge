@@ -23,7 +23,7 @@ struct Forge::SigmoidGradsAbstract : Kernel {
 
 struct Forge::SoftmaxGradsAbstract : Kernel {
     SoftmaxGradsAbstract () : Kernel{ctti::type_id<SoftmaxGradsAbstract>()} {}
-    virtual void compute_grads(const Tensor& preactivations, const Tensor& activations) const = 0;
+    virtual void compute_grads(const Tensor& logits, const Tensor& activations) const = 0;
 };
 
 struct Forge::TanhGradsAbstract : Kernel {
