@@ -34,3 +34,26 @@ struct Forge::LeakyReluGradsCPU : LeakyReluGradsAbstract {
   }
 };
 
+struct Forge::GeluGradsCPU : GeluGradsAbstract {
+  void compute_grads(const Tensor& preactivations, const Tensor& activations) const override {
+      DISPATCH_ALL_TYPES(preactivations.dtype(), Device::CPU, [&] {
+          auto preact_map {preactivations.as_eigen<scalar_t>()};
+          auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
+          auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
+
+          const auto k {static_cast<scalar_t>(0.7978845608028654)}, c {static_cast<scalar_t>(0.044715)};
+          const auto half {static_cast<scalar_t>(0.5)}, one {static_cast<scalar_t>(1)}, three{static_cast<scalar_t>(3)};
+
+          const auto preact_sqr {preact_map.square()};
+          const auto preact_cube {preact_sqr*preact_map};
+          const auto u {k*(preact_map+c*preact_cube)};
+          const auto tanh_u {u.tanh()};
+
+          const auto term1 {half*(one+tanh_u)};
+          const auto sech2 {one-tanh_u.square()};
+          const auto term2 {half*preact_map*sech2*k*(one+three*c*preact_sqr)};
+
+          preact_grads_map += act_grads_map*(term1+term2);
+        });
+    }
+};
