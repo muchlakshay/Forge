@@ -70,3 +70,24 @@ struct Forge::GeluCPU : GeluAbstract {
         });
     }
 };
+
+struct Forge::SoftmaxCPU : SoftmaxAbstract {
+    void forward(const Tensor& input, Tensor& output) override {
+        DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
+            auto input_map {input.as_eigen<scalar_t>()};
+            auto output_map {output.as_eigen<scalar_t>()};
+
+            Eigen::array<Eigen::Index, 1> reduce_axis {3};
+
+            auto dims {input_map.dimensions()};
+            Eigen::array<Eigen::Index, 4> kept_dims {dims[0], dims[1], dims[2], 1};
+            Eigen::array<Eigen::Index, 4> bcast_dims {1, 1, 1, dims[3]};
+
+            auto max_vals {input_map.maximum(reduce_axis).reshape(kept_dims).broadcast(bcast_dims)};
+            auto exp_vals {(input_map - max_vals).exp()};
+
+            auto sum_exp {exp_vals.sum(reduce_axis).reshape(kept_dims).broadcast(bcast_dims)};
+            output_map = exp_vals / sum_exp;
+        });
+    }
+};
