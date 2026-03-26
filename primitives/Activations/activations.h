@@ -39,3 +39,11 @@ class Forge::LeakyRelu {
     }
 };
 
+class Forge::Tanh {
+    Tensor operator()(const Tensor& input) const {
+        Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
+        const auto* tanh {primitive_dispatcher().lookup<TanhAbstract>(primitive_ops::tanh, input.dispatch_key())};
+        tanh->forward(input, output);
+        return output;
+    }
+};
