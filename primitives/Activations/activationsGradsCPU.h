@@ -89,3 +89,14 @@ struct Forge::SigmoidGradsCPU : SigmoidGradsAbstract {
         });
     }
 };
+
+struct Forge::TanhGradsCPU : TanhGradsAbstract {
+    void compute_grads(const Tensor& preactivations, const Tensor& activations) const override {
+        DISPATCH_ALL_TYPES(preactivations.dtype(), Device::CPU, [&] {
+            auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
+            auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
+            auto act_map{activations.as_eigen<scalar_t>()};
+            preact_grads_map += act_grads_map * (static_cast<scalar_t>(1)-act_map.square());
+        });
+    }
+};
