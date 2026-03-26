@@ -20,3 +20,13 @@ class Forge::Relu {
         return output;
     }
 };
+
+class Forge::Softmax {
+    Tensor operator()(const Tensor& input) const {
+        Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
+        const auto* softmax {primitive_dispatcher().lookup<SoftmaxAbstract>(primitive_ops::softmax, input.dispatch_key())};
+        softmax->forward(input, output);
+        return output;
+    }
+};
+
