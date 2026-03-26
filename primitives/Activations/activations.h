@@ -47,3 +47,12 @@ class Forge::Tanh {
         return output;
     }
 };
+
+class Forge::Gelu {
+    Tensor operator()(const Tensor& input) const {
+        Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
+        const auto* gelu {primitive_dispatcher().lookup<GeluAbstract>(primitive_ops::gelu, input.dispatch_key())};
+        gelu->forward(input, output);
+        return output;
+    }
+};
