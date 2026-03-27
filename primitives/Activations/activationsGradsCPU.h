@@ -17,7 +17,7 @@ struct Forge::ReluGradsCPU : ReluGradsAbstract {
             auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
             auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
             auto zero {static_cast<scalar_t>(0)};
-            preact_grads_map += act_grads_map*(preact_map>zero).select(act_grads_map, zero);
+            preact_grads_map += act_grads_map*(preact_map>zero).select(static_cast<scalar_t>(1), zero);
         });
     }
 };
