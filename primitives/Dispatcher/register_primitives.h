@@ -12,22 +12,34 @@ struct Forge::RegisterPrimitives {
     LinearGradsCPU linear_grads_cpu {};
     WeightsInitCPU weights_init_cpu{};
     ReluCPU relu_cpu{};
+    ReluGradsCPU relu_grads_cpu {};
     SoftmaxCPU softmax_cpu{};
+    SoftmaxGradsCPU softmax_grads_cpu {};
     TanhCPU tanh_cpu{};
+    TanhGradsCPU tanh_grads_cpu {};
     GeluCPU gelu_cpu{};
+    GeluGradsCPU gelu_grads_cpu {};
     SigmoidCPU sigmoid_cpu{};
+    SigmoidGradsCPU sigmoid_grads_cpu {};
     LeakyReluCPU leaky_relu_cpu{};
+    LeakyReluGradsCPU leaky_relu_grads_cpu {};
 
     RegisterPrimitives() {
         primitive_dispatcher().register_kernel<LinearAbstract>(&linear_layer_cpu, primitive_ops::linear,DispatchKey::CPU);
         primitive_dispatcher().register_kernel<WeightsInitCPU>(&weights_init_cpu, primitive_ops::weightsInit,DispatchKey::CPU);
         primitive_dispatcher().register_kernel<LinearGradsAbstract>(&linear_grads_cpu, primitive_ops::linear, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<ReluAbstract>(&relu_cpu, primitive_ops::relu, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<ReluGradsAbstract>(&relu_grads_cpu, primitive_ops::relu, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<SoftmaxAbstract>(&softmax_cpu, primitive_ops::softmax, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<SoftmaxGradsAbstract>(&softmax_grads_cpu, primitive_ops::softmax, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<TanhAbstract>(&tanh_cpu, primitive_ops::tanh, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<TanhGradsAbstract>(&tanh_grads_cpu, primitive_ops::tanh, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<GeluCPU>(&gelu_cpu, primitive_ops::gelu, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<GeluGradsAbstract>(&gelu_grads_cpu, primitive_ops::gelu, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<SigmoidAbstract>(&sigmoid_cpu, primitive_ops::sigmoid, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<SigmoidGradsAbstract>(&sigmoid_grads_cpu, primitive_ops::sigmoid, DispatchKey::CPU_Autodiff);
         primitive_dispatcher().register_kernel<LeakyReluAbstract>(&leaky_relu_cpu, primitive_ops::leaky_relu, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<LeakyReluGradsCPU>(&leaky_relu_grads_cpu, primitive_ops::leaky_relu, DispatchKey::CPU_Autodiff);
     }
 };
 
