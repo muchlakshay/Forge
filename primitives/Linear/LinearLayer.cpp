@@ -1,6 +1,9 @@
 #include "LinearLayer.h"
+#include "autograd/attach_node.h"
+#include "LinearGradsAbstract.h"
+#include "LinearAbstract.h"
 
-inline Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, Initializers initializer, Dtype dtype,
+Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, Initializers initializer, Dtype dtype,
 Device device, bool bias)
 : m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_input_size{input_size},
 m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}{
@@ -13,7 +16,7 @@ m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}
 }
 
 
-inline Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
+Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
     if (input.dtype()!=m_dtype) throw std::invalid_argument("input tensor and Layer weights have different dtypes");
     if (auto inp_cols{input.shape().back()}; inp_cols != m_input_size) throw std::invalid_argument(
         std::format("invalid input tensor shape. Expected: {}, Got: {}", m_input_size, inp_cols));

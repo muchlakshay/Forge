@@ -1,7 +1,7 @@
 #include "LinearLayerCPU.h"
 
 void Forge::LinearCPU::forward(const Tensor& input, const Tensor& output, const Tensor& weights,
-    const Tensor& bias, bool using_bias) const override {
+    const Tensor& bias, bool using_bias) const {
     DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
         auto weights_map { weights.as_eigen<scalar_t>()};
         auto input_map   { input.as_eigen<scalar_t>()  };

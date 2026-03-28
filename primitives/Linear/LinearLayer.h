@@ -2,9 +2,6 @@
 #include "tensor/tensor.h"
 #include "../Dispatcher/primitive_dispatcher.h"
 #include "../weights_init.h"
-#include "autograd/attach_node.h"
-#include "LinearGradsAbstract.h"
-#include "LinearAbstract.h"
 
 namespace Forge {
     class Linear;
