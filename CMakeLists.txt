@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_library(Forge STATIC
         "core/ops/Ops Kernels/CPU/utility_ops_CPU.cpp"
         core/tensor/Storage/CPU/memory_pool_cpu.cpp
+        core/tensor/tensor.cpp
 )
 target_include_directories(Forge PUBLIC
         C:/Users/MSI/Documents/CPPLibs/eigen-3.4.0
