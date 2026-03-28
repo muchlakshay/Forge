@@ -1,5 +1,5 @@
 #pragma once
-#include "acvitvationsGradsAbstract.h"
+#include "../acvitvationsGradsAbstract.h"
 
 namespace Forge {
     struct ReluGradsCPU;
@@ -16,8 +16,10 @@ struct Forge::ReluGradsCPU : ReluGradsAbstract {
             auto preact_map {preactivations.as_eigen<scalar_t>()};
             auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
             auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
-            auto zero {static_cast<scalar_t>(0)};
-            preact_grads_map += act_grads_map*(preact_map>zero).select(static_cast<scalar_t>(1), zero);
+
+            auto zero {preact_map.constant(static_cast<scalar_t>(0))};
+            auto one  {preact_map.constant(static_cast<scalar_t>(1))};
+            preact_grads_map += act_grads_map*(preact_map>zero).select(one, zero);
         });
     }
 };
@@ -28,8 +30,11 @@ struct Forge::LeakyReluGradsCPU : LeakyReluGradsAbstract {
           auto preact_map {preactivations.as_eigen<scalar_t>()};
           auto preact_grads_map {preactivations.gradients().as_eigen<scalar_t>()};
           auto act_grads_map {activations.gradients().as_eigen<scalar_t>()};
-          const auto alpha {static_cast<scalar_t>(0.01)}, zero{static_cast<scalar_t>(0)}, one {static_cast<scalar_t>(1)};
-          preact_grads_map += act_grads_map*(preact_map>zero).select(one, alpha);
+
+          auto alpha {preact_map.constant(static_cast<scalar_t>(0.01))};
+          auto one  {preact_map.constant(static_cast<scalar_t>(1))};
+
+          preact_grads_map += act_grads_map*(preact_map>static_cast<scalar_t>(0)).select(one, alpha);
       });
   }
 };
