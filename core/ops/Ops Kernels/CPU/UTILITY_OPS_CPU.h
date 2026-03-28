@@ -1,6 +1,6 @@
 #pragma once
 #include "../utility_ops.h"
-#include "Storage/storage_cpu.h"
+#include "../../../tensor/Storage/CPU/storage_cpu.h"
 #include <memory>
 
 namespace Forge {

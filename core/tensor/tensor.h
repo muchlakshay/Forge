@@ -1,5 +1,5 @@
 #pragma once
-#include "Storage/storage_cpu.h"
+#include "Storage/CPU/storage_cpu.h"
 #include "enums.h"
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"

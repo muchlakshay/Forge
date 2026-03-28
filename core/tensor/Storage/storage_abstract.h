@@ -1,5 +1,5 @@
 #pragma once
-#include "memory_pool_cpu.h"
+#include "CPU/memory_pool_cpu.h"
 
 template <typename T>
 concept TensorStorageType = std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>;
