@@ -11,6 +11,10 @@ add_library(Forge STATIC
         primitives/Activations/activations.cpp
         primitives/Activations/CPU/activationsCPU.cpp
         primitives/Activations/CPU/activationsGradsCPU.cpp
+        primitives/Linear/CPU/LinearGradsCPU.cpp
+        primitives/Linear/LinearLayer.cpp
+        primitives/Linear/CPU/LinearLayerCPU.cpp
+        primitives/Linear/CPU/weights_init_cpu.cpp
 )
 
 target_include_directories(Forge PUBLIC
