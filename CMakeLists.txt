@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.31)
 project(Forge)
 
 set(CMAKE_CXX_STANDARD 20)
-#set(CMAKE_CXX_FLAGS_DEBUG "-g1")
 
 add_library(Forge STATIC
         "core/ops/Ops Kernels/CPU/utility_ops_CPU.cpp"
