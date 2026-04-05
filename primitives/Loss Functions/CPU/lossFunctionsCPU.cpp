@@ -34,4 +34,20 @@ void Forge::CrossEntropyCPU::compute_loss(const Tensor &pred, const Tensor &grou
     });
 }
 
+void Forge::BinaryCrossEntropyCPU::compute_loss(const Tensor &pred, const Tensor &ground_truth, Tensor &loss) const {
+    auto loss_map {loss.as_eigen<float>()};
+    DISPATCH_ALL_TYPES(pred.dtype(), Device::CPU, [&] {
+        auto pred_map {pred.as_eigen<scalar_t>()};
+        auto ground_truth_map {ground_truth.as_eigen<scalar_t>()};
+        auto zero {static_cast<scalar_t>(0)};
+        auto one {pred_map.constant(static_cast<scalar_t>(1))};
+
+        auto max_term {pred_map.cwiseMax(zero)};
+        auto log_term {(one + (-pred_map.abs()).exp()).log()};
+        auto BCE {max_term - pred_map*ground_truth_map+log_term};
+        Eigen::Tensor<scalar_t, 0, Eigen::RowMajor> BCE_val {BCE.sum()};
+        loss_map(0, 0, 0, 0) = {static_cast<float>(BCE_val())/static_cast<float>(pred_map.dimensions()[2])};
+
+    });
+}
 
