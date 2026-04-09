@@ -14,12 +14,16 @@ add_library(Forge STATIC
         primitives/Linear/LinearLayer.cpp
         primitives/Linear/CPU/LinearLayerCPU.cpp
         primitives/Linear/CPU/weights_init_cpu.cpp
+        "primitives/Loss Functions/lossFunctions.cpp"
+        "primitives/Loss Functions/CPU/lossFunctionsCPU.cpp"
+        "primitives/Loss Functions/CPU/lossFunctionsGrads.cpp"
 )
 
 target_include_directories(Forge PUBLIC
         C:/Users/MSI/Documents/CPPLibs/eigen-3.4.0
         core/tensor
         C:/Users/MSI/Documents/CPPLibs/ctti/include core/
+        core/
 )
 
 add_executable(main
