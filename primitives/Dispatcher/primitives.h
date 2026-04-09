@@ -6,3 +6,6 @@
 #include "../Linear/LinearLayer.h"
 #include "../Activations/CPU/activationsCPU.h"
 #include "../Activations/CPU/activationsGradsCPU.h"
+#include "../Loss Functions/CPU/lossFunctionsCPU.h"
+#include "../Loss Functions/lossFunctions.h"
+#include "../loss Functions/CPU/lossFunctionsGradsCPU.h"
