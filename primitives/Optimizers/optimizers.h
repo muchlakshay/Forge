@@ -13,8 +13,8 @@ class Forge::SGD {
     Dtype m_dtype{};
 public:
   explicit SGD(std::vector<Tensor*> parameters, const float lr=0.001f);
-    void update();
-    void clear_grads();
+    void update() const;
+    void clear_grads() const {for (const auto p : m_parameters) p->clear_grads();};
     auto parameters() const {return m_parameters;}
     auto learningRate() const {return m_learningRate;}
 };
