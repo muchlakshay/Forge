@@ -28,3 +28,18 @@ const Forge::Tensor& Forge::MSE::operator()(const Tensor &predictions, const Ten
     return m_loss;
 }
 
+const Forge::Tensor& Forge::CrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
+    check_device_dtype_shape(predictions, ground_truth);
+
+    auto dispatch_key {predictions.dispatch_key()};
+    auto device {predictions.device()};
+
+    m_loss = Tensor{{1}, Dtype::float32, true, predictions.device()};
+
+    const auto* ce {primitive_dispatcher().lookup<CrossEntropyAbstract>(primitive_ops::crossEntropy, dispatch_key)};
+    attach_node<CrossEntropyGradsAbstract, 2>(m_loss, device, primitive_dispatcher(), primitive_ops::crossEntropy, predictions, ground_truth);
+    ce->compute_loss(predictions, ground_truth, m_loss);
+
+    return m_loss;
+}
+
