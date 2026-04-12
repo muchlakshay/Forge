@@ -9,12 +9,10 @@ namespace Forge {
 class Forge::SGD {
     std::vector<Tensor*> m_parameters{};
     float m_learningRate {};
-    Device m_device{};
-    Dtype m_dtype{};
 public:
-  explicit SGD(std::vector<Tensor*> parameters, const float lr=0.001f);
+    explicit SGD(std::vector<Tensor *> parameters, const float lr) : m_parameters{std::move(parameters)}, m_learningRate {lr}{}
     void update() const;
     void clear_grads() const {for (const auto p : m_parameters) p->clear_grads();};
-    auto parameters() const {return m_parameters;}
-    auto learningRate() const {return m_learningRate;}
+    [[nodiscard]] auto parameters() const {return m_parameters;}
+    [[nodiscard]] auto learningRate() const {return m_learningRate;}
 };
