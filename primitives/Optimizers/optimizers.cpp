@@ -19,8 +19,21 @@ void Forge::invariants_checks_rmv_duplicates(std::vector<Forge::Tensor *>& param
     params.erase(it, params.end());
 }
 
+Forge::SGD::SGD(std::vector<Tensor *> parameters, const float lr, const float momentum_coef)
+    : m_parameters{std::move(parameters)}, m_learningRate {lr}, m_momentum_coef {momentum_coef}{
+    invariants_checks_rmv_duplicates(m_parameters);
+
+    if (momentum_coef<0.0f || momentum_coef>1.0f) throw std::invalid_argument("Momentum coefficient must be in interval [0, 1]");
+    if (momentum_coef>0.0f) {
+        for (std::size_t i{}; i<m_parameters.size(); ++i) {
+            const auto param {m_parameters[i]};
+            m_V.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
+        }
+    }
+}
+
 void Forge::SGD::update() const {
     const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, DispatchKey::CPU)};
-    update_func->update(m_parameters, m_learningRate);
+    update_func->update(m_parameters, m_learningRate, m_momentum_coef, m_V);
 }
 
