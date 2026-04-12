@@ -19,4 +19,8 @@ void Forge::invariants_checks_rmv_duplicates(std::vector<Forge::Tensor *>& param
     params.erase(it, params.end());
 }
 
+void Forge::SGD::update() const {
+    const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, DispatchKey::CPU)};
+    update_func->update(m_parameters, m_learningRate);
+}
 

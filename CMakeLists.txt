@@ -17,6 +17,8 @@ add_library(Forge STATIC
         "primitives/Loss Functions/lossFunctions.cpp"
         "primitives/Loss Functions/CPU/lossFunctionsCPU.cpp"
         "primitives/Loss Functions/CPU/lossFunctionsGrads.cpp"
+        primitives/Optimizers/optimizers.cpp
+        primitives/Optimizers/CPU/optimizersUpdateCPU.cpp
 )
 
 target_include_directories(Forge PUBLIC
