@@ -9,5 +9,6 @@ namespace Forge{
 
 struct Forge::SGDUpdateAbstract : Kernel {
     SGDUpdateAbstract() : Kernel{ctti::type_id<SGDUpdateAbstract>()} {}
-    virtual void update(const std::vector<Tensor*>& params, float lr) const = 0;
+    virtual void update(const std::vector<Tensor*>& params, float lr, float momentum_coef,
+        const std::vector<Tensor>& V) const = 0;
 };
