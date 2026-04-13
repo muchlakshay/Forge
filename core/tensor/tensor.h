@@ -7,6 +7,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
+#include <iostream>
 
 namespace Forge {
     class Tensor;
@@ -51,7 +52,7 @@ class Forge::Tensor {
     std::size_t m_size{};
     bool m_need_grads{};
     DispatchKey m_dispatch_key{};
-    std::shared_ptr<NodeAbstract> m_node{};
+    mutable std::shared_ptr<NodeAbstract> m_node{};
     std::shared_ptr<Tensor> m_grads{};
 
     template <typename T, typename U>
@@ -119,7 +120,12 @@ public:
 
     [[nodiscard]] auto& grads() const {return m_grads;}
     [[nodiscard]] auto& gradients() const {return *(grads());}
-    void backward() const {if (m_node) {grads()->setConstant(1.0f); m_node->backward();}}
+    void backward(const bool keep_graph=false) const {
+        if (m_node) {
+            grads()->setConstant(1.0f); m_node->backward();
+            if (!keep_graph) m_node.reset();
+        }
+    }
     void clear_grads() const {if (m_grads) m_grads->setConstant(0.f);}
 
 };
@@ -169,10 +175,11 @@ std::vector<T> Forge::flatten_list(const std::initializer_list<U>& list) {
 template<TensorStorageType T>
 Forge::Tensor Forge::Tensor::FromHostPtr(T *host_ptr, const std::vector<std::size_t> &shape,
     bool need_grads) {
+    if (!host_ptr) throw std::invalid_argument("host_ptr is null");
     Tensor tensor {};
     tensor.m_shape = shape; tensor.m_strides.resize(shape.size());
     std::size_t size {1u};
-    for (int i = shape.size()-1; i>=0; i--) {
+    for (auto i {static_cast<int>(shape.size())-1}; i>=0; i--) {
         if (shape[i]==0) throw std::invalid_argument("tensor shape must be non-zero");
         tensor.m_strides[i] = size;
         size*=tensor.m_shape[i];
@@ -238,7 +245,7 @@ Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
     if (sizeof...(dims)>4) throw std::invalid_argument("Reshaped tensor rank must be at max 4");
 
     std::vector<std::size_t> new_shape {dims...}, new_strides (new_shape.size());
-    for (int i = new_shape.size()-1; i>=0; --i) {
+    for (int i = static_cast<int>(new_shape.size()-1); i>=0; --i) {
         new_strides[i] = size;
         size*=new_shape[i];
     }
