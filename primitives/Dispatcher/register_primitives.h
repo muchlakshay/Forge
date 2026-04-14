@@ -41,6 +41,7 @@ struct Forge::RegisterPrimitives {
     BinaryCrossEntropyGradsCPU binaryCrossEntropyGrads_cpu {};
 
     SGDUpdateCPU sgdUpdate_cpu{};
+    AdamUpdateCPU adamUpdate_cpu{};
 
     RegisterPrimitives() {
         primitive_dispatcher().register_kernel<LinearAbstract>(&linear_layer_cpu, primitive_ops::linear,DispatchKey::CPU);
@@ -76,6 +77,7 @@ struct Forge::RegisterPrimitives {
         primitive_dispatcher().register_kernel<BinaryCrossEntropyGradsAbstract>(&binaryCrossEntropyGrads_cpu, primitive_ops::binaryCrossEntropy, DispatchKey::CPU_Autodiff);
 
         primitive_dispatcher().register_kernel<SGDUpdateAbstract>(&sgdUpdate_cpu, primitive_ops::SGD, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<AdamUpdateAbstract>(&adamUpdate_cpu, primitive_ops::Adam, DispatchKey::CPU);
     }
 };
 
