@@ -4,9 +4,9 @@
 #include <algorithm>
 
 namespace Forge {
-    void invariants_checks_rmv_duplicates(std::vector<Forge::Tensor *>& params);
+    void invariants_checks_rmv_duplicates(std::vector<Tensor *>& params);
 }
-void Forge::invariants_checks_rmv_duplicates(std::vector<Forge::Tensor *>& params) {
+void Forge::invariants_checks_rmv_duplicates(std::vector<Tensor *>& params) {
     if (params.empty()) throw std::invalid_argument("No parameters provided");
     const auto device {params[0]->device()};
     const auto dtype {params[0]->dtype()};
@@ -37,3 +37,16 @@ void Forge::SGD::update() const {
     const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, dispatch_key)};
     update_func->update(m_parameters, m_learningRate, m_momentum_coef, m_V);
 }
+
+Forge::Adam::Adam(const std::vector<Tensor *> &parameters, float lr, float beta_1, float beta_2)
+    : m_parameters{parameters}, m_learningRate{lr}, m_beta_1 {beta_1}, m_beta_2{beta_2} {
+    invariants_checks_rmv_duplicates(m_parameters);
+    if (beta_1<0.0f || beta_1>1.0f || beta_2<0.0f || beta_2>1.0f) throw std::invalid_argument("Beta coefficient must be in [0, 1]");
+
+    for (std::size_t i{}; i<m_parameters.size(); ++i) {
+        const auto param {m_parameters[i]};
+        m_V.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
+        m_M.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
+    }
+}
+
