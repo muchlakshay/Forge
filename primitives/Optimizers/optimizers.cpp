@@ -33,7 +33,7 @@ Forge::SGD::SGD(std::vector<Tensor *> parameters, const float lr, const float mo
 }
 
 void Forge::SGD::update() const {
-    const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, DispatchKey::CPU)};
+    auto dispatch_key {m_parameters[0]->dispatch_key()};
+    const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, dispatch_key)};
     update_func->update(m_parameters, m_learningRate, m_momentum_coef, m_V);
 }
-
