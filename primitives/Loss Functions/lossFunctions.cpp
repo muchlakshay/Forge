@@ -13,47 +13,47 @@ void check_device_dtype_shape(const Forge::Tensor& pred, const Forge::Tensor& gr
         "prediction and label tensor have different dtypes");
 }
 
-const Forge::Tensor& Forge::MSE::operator()(const Tensor &predictions, const Tensor &ground_truth) {
+Forge::Tensor Forge::MSE::operator()(const Tensor &predictions, const Tensor &ground_truth) {
     check_device_dtype_shape(predictions, ground_truth);
 
     auto dispatch_key {predictions.dispatch_key()};
     auto device {predictions.device()};
 
-    m_loss = Tensor{{1}, Dtype::float32, true, predictions.device()};
+    auto loss {Tensor{{1}, Dtype::float32, true, predictions.device()}};
 
     const auto* mse {primitive_dispatcher().lookup<MSEAbstract>(primitive_ops::mse, dispatch_key)};
-    mse->compute_loss(predictions, ground_truth, m_loss);
+    mse->compute_loss(predictions, ground_truth, loss);
 
-    attach_node<MSEGradsAbstract, 2>(m_loss, device, primitive_dispatcher(), primitive_ops::mse, predictions, ground_truth);
-    return m_loss;
+    attach_node<MSEGradsAbstract, 2>(loss, device, primitive_dispatcher(), primitive_ops::mse, predictions, ground_truth);
+    return loss;
 }
 
-const Forge::Tensor& Forge::CrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
+Forge::Tensor Forge::CrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
     check_device_dtype_shape(predictions, ground_truth);
 
     auto dispatch_key {predictions.dispatch_key()};
     auto device {predictions.device()};
 
-    m_loss = Tensor{{1}, Dtype::float32, true, predictions.device()};
+    auto loss {Tensor{{1}, Dtype::float32, true, predictions.device()}};
 
     const auto* ce {primitive_dispatcher().lookup<CrossEntropyAbstract>(primitive_ops::crossEntropy, dispatch_key)};
-    attach_node<CrossEntropyGradsAbstract, 2>(m_loss, device, primitive_dispatcher(), primitive_ops::crossEntropy, predictions, ground_truth);
-    ce->compute_loss(predictions, ground_truth, m_loss);
+    attach_node<CrossEntropyGradsAbstract, 2>(loss, device, primitive_dispatcher(), primitive_ops::crossEntropy, predictions, ground_truth);
+    ce->compute_loss(predictions, ground_truth, loss);
 
-    return m_loss;
+    return loss;
 }
 
-const Forge::Tensor& Forge::BinaryCrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
+Forge::Tensor Forge::BinaryCrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
     check_device_dtype_shape(predictions, ground_truth);
 
     auto dispatch_key {predictions.dispatch_key()};
     auto device {predictions.device()};
 
-    m_loss = Tensor{{1}, Dtype::float32, true, predictions.device()};
+    auto loss {Tensor{{1}, Dtype::float32, true, predictions.device()}};
 
     const auto* bce {primitive_dispatcher().lookup<BinaryCrossEntropyAbstract>(primitive_ops::binaryCrossEntropy, dispatch_key)};
-    attach_node<BinaryCrossEntropyGradsAbstract, 2>(m_loss, device, primitive_dispatcher(), primitive_ops::binaryCrossEntropy, predictions, ground_truth);
-    bce->compute_loss(predictions, ground_truth, m_loss);
+    attach_node<BinaryCrossEntropyGradsAbstract, 2>(loss, device, primitive_dispatcher(), primitive_ops::binaryCrossEntropy, predictions, ground_truth);
+    bce->compute_loss(predictions, ground_truth, loss);
 
-    return m_loss;
+    return loss;
 }

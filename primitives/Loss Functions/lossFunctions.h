@@ -2,28 +2,19 @@
 #include "lossFunctionsBase.h"
 
 namespace Forge {
-    class MSE;
-    class CrossEntropy;
-    class BinaryCrossEntropy;
+    struct MSE;
+    struct  CrossEntropy;
+    struct  BinaryCrossEntropy;
 }
 
-class Forge::MSE final : LossFunction {
-    Tensor m_loss;
-public:
-    const Tensor& operator()(const Tensor& predictions, const Tensor& ground_truth) override;
-    void backward() const override {if (m_loss.need_grads()) m_loss.backward(); }
+struct Forge::MSE final : LossFunction { Tensor operator()(
+    const Tensor& predictions, const Tensor& ground_truth) override;
 };
 
-class Forge::CrossEntropy final : LossFunction{
-    Tensor m_loss;
-public:
-    const Tensor& operator()(const Tensor& predictions, const Tensor& ground_truth) override;
-    void backward() const override {if (m_loss.need_grads()) m_loss.backward(); }
+struct Forge::CrossEntropy final : LossFunction {
+    Tensor operator()(const Tensor& predictions, const Tensor& ground_truth) override;
 };
 
-class Forge::BinaryCrossEntropy final : LossFunction{
-    Tensor m_loss;
-public:
-    const Tensor& operator()(const Tensor& predictions, const Tensor& ground_truth) override;
-    void backward() const override {if (m_loss.need_grads()) m_loss.backward(); }
+struct Forge::BinaryCrossEntropy final : LossFunction {
+    Tensor operator()(const Tensor& predictions, const Tensor& ground_truth) override;
 };
