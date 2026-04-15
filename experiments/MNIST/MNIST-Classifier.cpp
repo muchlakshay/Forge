@@ -34,7 +34,7 @@ void downloadMNIST() {
 
 int main() {
     downloadMNIST();
-    //change these parts according to where you downloaded MNIST
+    //change these paths according to where you downloaded MNIST
     auto train_img_path {"Data/train-images.idx3-ubyte"};
     auto train_lab_path {"Data/train-labels.idx1-ubyte"};
     auto test_img_path {"Data/t10k-images.idx3-ubyte"};
