@@ -1,12 +1,12 @@
 #include "optimizersUpdateCPU.h"
 
-void Forge::SGDUpdateCPU::update(const std::vector<Tensor *> &params, const float lr,
+void Forge::SGDUpdateCPU::update(const std::vector<Parameter> &params, const float lr,
     float momentum_coef, const std::vector<Tensor>& V) const {
     using grads_t = float;
-    const auto dtype {params[0]->dtype()};
+    const auto dtype {params[0].m_param_ptr->dtype()};
     DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
         for (std::size_t i {}; i<params.size(); ++i) {
-            auto* param {params[i]};
+            auto* param {params[i].m_param_ptr};
 
             auto p_map {param->as_eigen<scalar_t>()};
             auto p_grads_map {param->gradients().as_eigen<grads_t>().template cast<scalar_t>()};
@@ -23,17 +23,17 @@ void Forge::SGDUpdateCPU::update(const std::vector<Tensor *> &params, const floa
     });
 }
 
-void Forge::AdamUpdateCPU::update(const std::vector<Tensor *> &params, float lr, const std::vector<Tensor> &V,
+void Forge::AdamUpdateCPU::update(const std::vector<Parameter> &params, float lr, const std::vector<Tensor> &V,
     const std::vector<Tensor> &M, float beta_1, float beta_2, int epoch) const {
     using grads_t = float;
-    const auto dtype {params[0]->dtype()};
+    const auto dtype {params[0].m_param_ptr->dtype()};
     DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
         for (std::size_t i{}; i<params.size(); ++i) {\
-            auto& p {*params[i]};
+            auto& p {*params[i].m_param_ptr};
             Tensor temp {p.gradients().shape(), p.dtype(), false, p.device()};
             Tensor M_hat {p.gradients().shape(), p.dtype(), false, p.device()};
-            auto p_map {params[i]->as_eigen<scalar_t>()};
-            auto p_grads_map {params[i]->gradients().as_eigen<grads_t>(). template cast<scalar_t>()};
+            auto p_map {params[i].m_param_ptr->as_eigen<scalar_t>()};
+            auto p_grads_map {params[i].m_param_ptr->gradients().as_eigen<grads_t>(). template cast<scalar_t>()};
             auto V_map {V[i].as_eigen<scalar_t>()};
             auto M_map {M[i].as_eigen<scalar_t>()};
             auto temp_map {temp.as_eigen<scalar_t>()};

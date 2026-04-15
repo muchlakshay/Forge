@@ -4,54 +4,54 @@
 #include <algorithm>
 
 namespace Forge {
-    void invariants_checks_rmv_duplicates(std::vector<Tensor *>& params);
+    void invariants_checks_rmv_duplicates(std::vector<Parameter>& params);
 }
-void Forge::invariants_checks_rmv_duplicates(std::vector<Tensor *>& params) {
+void Forge::invariants_checks_rmv_duplicates(std::vector<Parameter>& params) {
     if (params.empty()) throw std::invalid_argument("No parameters provided");
-    const auto device {params[0]->device()};
-    const auto dtype {params[0]->dtype()};
+    const auto device {params[0].m_param_ptr->device()};
+    const auto dtype {params[0].m_param_ptr->dtype()};
     for (const auto p : params) {
-        if (p->device() != device) throw std::invalid_argument("parameters have different device");
-        if (p->dtype() != dtype) {throw std::invalid_argument("parameters have different dtype");}
+        if (p.m_param_ptr->device() != device) throw std::invalid_argument("parameters have different device");
+        if (p.m_param_ptr->dtype() != dtype) {throw std::invalid_argument("parameters have different dtype");}
     };
-    std::ranges::sort(params);
-    const auto it {std::ranges::unique(params).begin()};
+    std::ranges::sort(params, {}, &Parameter::m_param_ptr);
+    const auto it {std::ranges::unique(params, {}, &Parameter::m_param_ptr).begin()};
     params.erase(it, params.end());
 }
 
-Forge::SGD::SGD(std::vector<Tensor *> parameters, const float lr, const float momentum_coef)
+Forge::SGD::SGD(std::vector<Parameter> parameters, const float lr, const float momentum_coef)
     : m_parameters{std::move(parameters)}, m_learningRate {lr}, m_momentum_coef {momentum_coef}{
     invariants_checks_rmv_duplicates(m_parameters);
 
     if (momentum_coef<0.0f || momentum_coef>1.0f) throw std::invalid_argument("Momentum coefficient must be in interval [0, 1]");
     if (momentum_coef>0.0f) {
         for (std::size_t i{}; i<m_parameters.size(); ++i) {
-            const auto param {m_parameters[i]};
+            const auto param {m_parameters[i].m_param_ptr};
             m_V.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
         }
     }
 }
 
 void Forge::SGD::update() const {
-    auto dispatch_key {m_parameters[0]->dispatch_key()};
+    auto dispatch_key {m_parameters[0].m_param_ptr->dispatch_key()};
     const auto* update_func {primitive_dispatcher().lookup<SGDUpdateAbstract>(primitive_ops::SGD, dispatch_key)};
     update_func->update(m_parameters, m_learningRate, m_momentum_coef, m_V);
 }
 
-Forge::Adam::Adam(const std::vector<Tensor *> &parameters, float lr, float beta_1, float beta_2)
+Forge::Adam::Adam(const std::vector<Parameter> &parameters, float lr, float beta_1, float beta_2)
     : m_parameters{parameters}, m_learningRate{lr}, m_beta_1 {beta_1}, m_beta_2{beta_2} {
     invariants_checks_rmv_duplicates(m_parameters);
     if (beta_1<0.0f || beta_1>1.0f || beta_2<0.0f || beta_2>1.0f) throw std::invalid_argument("Beta coefficient must be in [0, 1]");
 
     for (std::size_t i{}; i<m_parameters.size(); ++i) {
-        const auto param {m_parameters[i]};
+        const auto param {m_parameters[i].m_param_ptr};
         m_V.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
         m_M.push_back(Tensor::Zeros(param->shape(), false, param->dtype(), param->device()));
     }
 }
 
 void Forge::Adam::update() const {
-    auto dispatch_key {m_parameters[0]->dispatch_key()};
+    auto dispatch_key {m_parameters[0].m_param_ptr->dispatch_key()};
     const auto* update_func {primitive_dispatcher().lookup<AdamUpdateAbstract>(primitive_ops::Adam, dispatch_key)};
     update_func->update(m_parameters, m_learningRate, m_V, m_M, m_beta_1, m_beta_2, m_epoch);
     m_epoch++;
