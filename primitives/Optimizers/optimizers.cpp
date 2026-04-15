@@ -23,7 +23,7 @@ Forge::SGD::SGD(std::vector<Parameter> parameters, const float lr, const float m
     : m_parameters{std::move(parameters)}, m_learningRate {lr}, m_momentum_coef {momentum_coef}{
     invariants_checks_rmv_duplicates(m_parameters);
 
-    if (momentum_coef<0.0f || momentum_coef>1.0f) throw std::invalid_argument("Momentum coefficient must be in interval [0, 1]");
+    check_in_range(momentum_coef, 0.f, 1.f, "Momentum coefficient");
     if (momentum_coef>0.0f) {
         for (std::size_t i{}; i<m_parameters.size(); ++i) {
             const auto param {m_parameters[i].m_param_ptr};
@@ -38,10 +38,12 @@ void Forge::SGD::update() const {
     update_func->update(m_parameters, m_learningRate, m_momentum_coef, m_V);
 }
 
-Forge::Adam::Adam(const std::vector<Parameter> &parameters, float lr, float beta_1, float beta_2)
-    : m_parameters{parameters}, m_learningRate{lr}, m_beta_1 {beta_1}, m_beta_2{beta_2} {
+Forge::Adam::Adam(const std::vector<Parameter> &parameters, float lr, float beta_1, float beta_2, float decay_factor)
+    : m_parameters{parameters}, m_learningRate{lr}, m_beta_1 {beta_1}, m_beta_2{beta_2}, m_decayFactor {decay_factor}{
+
     invariants_checks_rmv_duplicates(m_parameters);
-    if (beta_1<0.0f || beta_1>1.0f || beta_2<0.0f || beta_2>1.0f) throw std::invalid_argument("Beta coefficient must be in [0, 1]");
+    check_in_range(beta_1, 0.f, 1.f, "Beta 1");
+    check_in_range(beta_2, 0.f, 1.f, "Beta 2");
 
     for (std::size_t i{}; i<m_parameters.size(); ++i) {
         const auto param {m_parameters[i].m_param_ptr};
