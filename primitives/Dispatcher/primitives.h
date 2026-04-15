@@ -9,3 +9,5 @@
 #include "../Loss Functions/CPU/lossFunctionsCPU.h"
 #include "../Loss Functions/lossFunctions.h"
 #include "../loss Functions/CPU/lossFunctionsGradsCPU.h"
+#include "../Optimizers/CPU/optimizersUpdateCPU.h"
+#include "../Optimizers/optimizers.h"

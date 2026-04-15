@@ -42,4 +42,4 @@
 
 .idea
 /cmake-build-debug/
-tests/main.cpp
+tests/main2.cpp

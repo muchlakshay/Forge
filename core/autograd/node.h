@@ -21,7 +21,7 @@ class Forge::Node final : public NodeAbstract {
 public:
     template <typename... ParentTensors>
     explicit Node(Device device, const Dispatcher<OpEnum>& dispatcher,OpEnum op, Tensor& child, ParentTensors&&... parent_tensors) :
-    m_parents{Forge::Tensor{parent_tensors, Forge::NodeContext{}}...}, m_child{child, Forge::NodeContext{}},
+    m_parents{Tensor{parent_tensors, NodeContext{}}...}, m_child{child, NodeContext{}},
     m_dispatch_key{device==Device::CPU?DispatchKey::CPU_Autodiff:DispatchKey::CUDA_Autodiff},
     m_dispatcher{dispatcher}, m_op{op}, m_gradFn{dispatcher.template lookup<OpClass>(op, m_dispatch_key)}{
         static_assert(sizeof...(parent_tensors)==Parents, "Invalid number of parent tensors passed");

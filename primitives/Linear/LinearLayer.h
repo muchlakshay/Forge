@@ -27,4 +27,6 @@ public:
     [[nodiscard]] const auto& dispatch_key() const { return m_dispatch_key; }
     [[nodiscard]] const auto& device() const { return m_device; }
     [[nodiscard]] const auto& dtype() const { return m_dtype; }
+    [[nodiscard]] auto& weights() {return m_weights;}
+    [[nodiscard]] auto& bias() { return m_bias; }
 };
