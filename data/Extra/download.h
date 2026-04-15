@@ -3,17 +3,17 @@
 #include <string>
 #include <iostream>
 
-namespace Forge::Extra::Scripts {
+namespace Forge::Extra {
     bool download_file(const std::string& url, const std::string& output);
     bool download_with_fallback(const std::vector<std::string>& urls, const std::string& output, bool verbose=true);
 }
 
-inline bool Forge::Extra::Scripts::download_file(const std::string& url, const std::string& output) {
+inline bool Forge::Extra::download_file(const std::string& url, const std::string& output) {
     const std::string command {"curl -L " + url + " -o " + output};
     return std::system(command.c_str());
 }
 
-inline bool Forge::Extra::Scripts::download_with_fallback(const std::vector<std::string>& urls, const std::string& output, bool verbose) {
+inline bool Forge::Extra::download_with_fallback(const std::vector<std::string>& urls, const std::string& output, bool verbose) {
     if (verbose) std::cout<<"Downloading ...\n";
     for (const auto& url : urls) {
         if (verbose) std::cout<<"Trying: "<<url<<"\n";
