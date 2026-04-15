@@ -24,7 +24,7 @@ void Forge::SGDUpdateCPU::update(const std::vector<Parameter> &params, const flo
 }
 
 void Forge::AdamUpdateCPU::update(const std::vector<Parameter> &params, float lr, const std::vector<Tensor> &V,
-    const std::vector<Tensor> &M, float beta_1, float beta_2, int epoch) const {
+    const std::vector<Tensor> &M, float beta_1, float beta_2, float decay_factor, int epoch) const {
     using grads_t = float;
     const auto dtype {params[0].m_param_ptr->dtype()};
     DISPATCH_ALL_TYPES(dtype, Device::CPU, [&] {
@@ -41,6 +41,7 @@ void Forge::AdamUpdateCPU::update(const std::vector<Parameter> &params, float lr
             auto& V_hat_map {temp_map};
             auto beta_1_c {static_cast<scalar_t>(beta_1)};
             auto beta_2_c {static_cast<scalar_t>(beta_2)};
+            bool need_decay {params[i].need_decay};
             auto one {static_cast<scalar_t>(1)};
             auto learning_rate {static_cast<scalar_t>(lr)};
             auto e {static_cast<scalar_t>(1e-8)};
@@ -57,6 +58,7 @@ void Forge::AdamUpdateCPU::update(const std::vector<Parameter> &params, float lr
             V_hat_map = V_map / denom_2;
 
             p_map -= learning_rate * (M_hat_map / (V_hat_map.sqrt() + e));
+            if (need_decay) p_map -= learning_rate * static_cast<scalar_t>(decay_factor) * p_map;
         }
     });
 }

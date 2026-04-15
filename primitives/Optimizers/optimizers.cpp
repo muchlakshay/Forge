@@ -55,6 +55,6 @@ Forge::Adam::Adam(const std::vector<Parameter> &parameters, float lr, float beta
 void Forge::Adam::update() const {
     auto dispatch_key {m_parameters[0].m_param_ptr->dispatch_key()};
     const auto* update_func {primitive_dispatcher().lookup<AdamUpdateAbstract>(primitive_ops::Adam, dispatch_key)};
-    update_func->update(m_parameters, m_learningRate, m_V, m_M, m_beta_1, m_beta_2, m_epoch);
+    update_func->update(m_parameters, m_learningRate, m_V, m_M, m_beta_1, m_beta_2, m_decayFactor, m_epoch);
     m_epoch++;
 }

@@ -18,5 +18,5 @@ struct Forge::SGDUpdateAbstract : Kernel {
 struct Forge::AdamUpdateAbstract : Kernel {
     AdamUpdateAbstract() : Kernel{ctti::type_id<AdamUpdateAbstract>()} {}
     virtual void update(const std::vector<Parameter>& params, float lr, const std::vector<Tensor>& V,
-        const std::vector<Tensor>& M, float beta_1, float beta_2, int epoch) const = 0;
+        const std::vector<Tensor>& M, float beta_1, float beta_2, float decay_factor, int epoch) const = 0;
 };
