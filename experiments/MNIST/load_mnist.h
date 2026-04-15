@@ -15,7 +15,7 @@ struct MNISTData {
 };
 
 inline MNISTData load_mnist(const std::string& images_path, const std::string& labels_path) {
-    // --- images ---
+
     std::ifstream img_f(images_path, std::ios::binary);
     if (!img_f) throw std::runtime_error("Cannot open images file: " + images_path);
 
