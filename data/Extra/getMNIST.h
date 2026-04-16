@@ -11,6 +11,7 @@ namespace Forge::Extra{
 }
 
 inline void Forge::Extra::getMNIST(const std::string& output) {
+    if (!std::filesystem::is_directory(output)) std::filesystem::create_directory(output);
     std::vector<std::string> data {"https://raw.githubusercontent.com/lessLakshay/MNSIT-Dataset/main/MNIST.zip"};
     const auto output_ {(std::filesystem::path(output)/"MNIST.zip").string()};
     const auto unzip_output {(std::filesystem::path(output)).string()};
