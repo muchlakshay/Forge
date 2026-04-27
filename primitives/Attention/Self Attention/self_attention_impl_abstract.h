@@ -9,6 +9,6 @@ namespace Forge {
 
 struct Forge::SelfAttentionImplAbstract : Kernel{
     SelfAttentionImplAbstract() : Kernel{ctti::type_id<SelfAttentionImplAbstract>()} {}
-    virtual void forward(Tensor input, Tensor query_W, Tensor key_W, Tensor value_W, Tensor output, Tensor mask, Linear& linear,
+    virtual void forward(const Tensor input, const Tensor query_W, const Tensor key_W, const Tensor value_W, Tensor output, const Tensor mask, const Linear& linear,
         std::size_t heads, bool using_mask) const = 0;
 };

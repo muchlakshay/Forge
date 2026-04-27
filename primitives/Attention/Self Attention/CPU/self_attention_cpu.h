@@ -5,6 +5,6 @@ namespace Forge {
 }
 
 struct Forge::SelfAttentionCPU : SelfAttentionImplAbstract {
-    void forward(Tensor input, Tensor query_W, Tensor key_W, Tensor value_W, Tensor output, Tensor mask, Linear& linear,
+    void forward(const Tensor input, const Tensor query_W, const Tensor key_W, const Tensor value_W, Tensor output, const Tensor mask, const Linear& linear,
         std::size_t heads, bool using_mask) const override;
 };
