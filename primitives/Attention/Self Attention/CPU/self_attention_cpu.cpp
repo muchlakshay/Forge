@@ -47,7 +47,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor input, const Tensor query_W, 
         if (using_mask) {
             auto mask_map {mask.as_eigen<scalar_t>()};
             auto dims {temp_map.dimensions()};
-            Eigen::array bcast_dims {dims[0], dims[1], 1, 1};
+            Eigen::array<Eigen::Index, 4> bcast_dims {dims[0], dims[1], 1, 1};
             temp_map = temp_map.broadcast(bcast_dims);
         }
 
@@ -58,9 +58,11 @@ void Forge::SelfAttentionCPU::forward(const Tensor input, const Tensor query_W, 
         auto attention  {temp_2_map.contract(V_T, contract_dims_3)};
         TensorRef shuff_atten {attention.shuffle(shuffling_dims)};
         auto d {shuff_atten.dimensions()};
-        Eigen::array reshape_dims {1, d[0], d[1], d[2]*d[3]};
+        Eigen::array<Eigen::Index, 4> reshape_dims {1, d[0], d[1], d[2]*d[3]};
+
         TensorRef concat_expr {shuff_atten.reshape(reshape_dims)};
         auto opt_dims {concat_expr.dimensions()};
+
         Tensor concatinated {std::vector<std::size_t>(opt_dims.begin(), opt_dims.end()), query_W.dtype()};
 
         auto concat_map {concatinated.as_eigen<scalar_t>()};
