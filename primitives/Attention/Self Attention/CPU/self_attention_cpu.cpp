@@ -15,12 +15,15 @@ auto dimsAfterContract(T A, T B, std::size_t d_A, std::size_t d_B) {
     return dims;
 }
 
+template<typename Expr>
+using TensorEval = Eigen::TensorEvaluator<Expr, Eigen::DefaultDevice>;
+
 void Forge::SelfAttentionCPU::forward(const Tensor input, const Tensor query_W, const Tensor key_W, const Tensor value_W,
     Tensor output, const Tensor mask, const Linear& linear, std::size_t heads, bool using_mask) const {
     Softmax softmax;
 
     DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
-        using TensorRef = Eigen::TensorRef<Eigen::Tensor<scalar_t, 4>>;
+        using Device=Eigen::DefaultDevice;
 
         auto inp_map {input.as_eigen<scalar_t>()};
         auto Q_W_map {query_W.as_eigen<scalar_t>()};
@@ -56,17 +59,19 @@ void Forge::SelfAttentionCPU::forward(const Tensor input, const Tensor query_W, 
 
         Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(3, 2)};
         auto attention  {temp_2_map.contract(V_T, contract_dims_3)};
-        TensorRef shuff_atten {attention.shuffle(shuffling_dims)};
+
+        auto shuff_atten_ {attention.shuffle(shuffling_dims)};
+        TensorEval<decltype(shuff_atten_)> shuff_atten {shuff_atten_, Device()};
         auto d {shuff_atten.dimensions()};
         Eigen::array<Eigen::Index, 4> reshape_dims {1, d[0], d[1], d[2]*d[3]};
 
-        TensorRef concat_expr {shuff_atten.reshape(reshape_dims)};
+        auto concat_expr_ {shuff_atten_.reshape(reshape_dims)};
+        TensorEval<decltype(concat_expr_)> concat_expr {concat_expr_, Device()};
         auto opt_dims {concat_expr.dimensions()};
 
         Tensor concatinated {std::vector<std::size_t>(opt_dims.begin(), opt_dims.end()), query_W.dtype()};
-
         auto concat_map {concatinated.as_eigen<scalar_t>()};
-        concat_map = concat_expr;
+        concat_map = concat_expr_;
         output = linear(concatinated);
     });
 }
