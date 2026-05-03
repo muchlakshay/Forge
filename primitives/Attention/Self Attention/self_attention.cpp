@@ -29,7 +29,7 @@ Forge::SelfAttention::SelfAttention(std::size_t seq_len, std::size_t Q_K_dims, s
 }
 
 Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
-    Tensor output {};
+    Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
     const auto* impl {primitive_dispatcher().lookup<SelfAttentionImplAbstract>(primitive_ops::selfAttention, m_dispatch_key)};
     impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_linear, m_heads, m_mask);
     return output;
