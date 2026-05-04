@@ -15,6 +15,14 @@ auto dimsAfterContract(T A, T B, std::size_t d_A, std::size_t d_B) {
     return dims;
 }
 
+template<isSubscriptable T, isSubscriptable U>
+auto dimsAfterShuffle(T dims, U shuffle_dims_idx) {
+    std::vector<std::size_t> dims_after_shuffle;
+    dims_after_shuffle.reserve(dims.size());
+    for (const auto dim : shuffle_dims_idx) dims_after_shuffle.push_back(dims[dim]);
+    return dims_after_shuffle;
+}
+
 template<typename Expr>
 using TensorEval = Eigen::TensorEvaluator<Expr, Eigen::DefaultDevice>;
 
