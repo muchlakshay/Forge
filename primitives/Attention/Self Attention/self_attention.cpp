@@ -5,11 +5,11 @@
 #include "Weights Init/weights_init.h"
 #include <limits>
 
-Forge::SelfAttention::SelfAttention(std::size_t seq_len, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads,
-    bool mask, Device device, Dtype dtype, Initializers initializer) : m_query_W {{heads, seq_len, Q_K_dims}, dtype, true, device},
-    m_key_W{{heads, seq_len, Q_K_dims}, dtype, true, device}, m_value_W {{heads, seq_len, V_dims}, dtype, true, device},
-    m_linear{V_dims * heads, seq_len, Initializers::xavier_normal, m_query_W.dtype(), m_query_W.device(), false},
-    m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_heads{heads}{
+Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t seq_len, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads,
+    bool mask, Device device, Dtype dtype, Initializers initializer) : m_query_W {{heads, d_model, Q_K_dims}, dtype, true, device},
+    m_key_W{{heads, d_model, Q_K_dims}, dtype, true, device}, m_value_W {{heads, d_model, V_dims}, dtype, true, device},
+    m_linear{V_dims * heads, d_model, Initializers::xavier_normal, m_query_W.dtype(), m_query_W.device(), false},
+    m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_heads{heads}, m_d_model{d_model}{
 
     const auto* init {primitive_dispatcher().lookup<WeightsInitAbstract>(primitive_ops::weightsInit, m_dispatch_key)};
     init->initialize(m_query_W, m_query_W.shape(), initializer);
@@ -31,7 +31,7 @@ Forge::SelfAttention::SelfAttention(std::size_t seq_len, std::size_t Q_K_dims, s
 Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
     Tensor output {input.shape(), input.dtype(), input.need_grads(), input.device()};
     const auto* impl {primitive_dispatcher().lookup<SelfAttentionImplAbstract>(primitive_ops::selfAttention, m_dispatch_key)};
-    impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_linear, m_heads, m_mask);
+    impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_linear, m_heads, m_d_model, m_mask);
     return output;
 }
 
