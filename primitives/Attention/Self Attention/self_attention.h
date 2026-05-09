@@ -18,10 +18,13 @@ class Forge::SelfAttention {
     DispatchKey m_dispatch_key {};
     std::size_t m_heads{};
     std::size_t m_d_model{};
+    Device m_device;
+    Dtype m_dtype;
 public:
-    SelfAttention(std::size_t d_model, std::size_t seq_len, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads, bool mask,
+    SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads, bool mask,
         Device device, Dtype=Dtype::float32, Initializers initializer=Initializers::he_normal);
     Tensor operator()(const Tensor& input) const;
+    void createMask(std::size_t seq_len);
     auto mask() const {return m_mask_;}
     [[nodiscard]] auto query() const {return m_query_W;}
     [[nodiscard]] auto key() const {return m_key_W;}
