@@ -44,6 +44,7 @@ struct Forge::RegisterPrimitives {
     AdamUpdateCPU adamUpdate_cpu{};
 
     SelfAttentionCPU self_attention_cpu{};
+    MaskCPU mask_cpu{};
 
     RegisterPrimitives() {
         primitive_dispatcher().register_kernel<LinearAbstract>(&linear_layer_cpu, primitive_ops::linear,DispatchKey::CPU);
@@ -82,6 +83,7 @@ struct Forge::RegisterPrimitives {
         primitive_dispatcher().register_kernel<AdamUpdateAbstract>(&adamUpdate_cpu, primitive_ops::Adam, DispatchKey::CPU);
 
         primitive_dispatcher().register_kernel<SelfAttentionImplAbstract>(&self_attention_cpu, primitive_ops::selfAttention, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<MaskAbstract>(&mask_cpu, primitive_ops::SA_mask, DispatchKey::CPU);
     }
 };
 

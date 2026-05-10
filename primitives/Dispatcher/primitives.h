@@ -14,3 +14,4 @@
 #include "../Optimizers/optimizers.h"
 #include "../Attention/Self Attention/self_attention.h"
 #include "../Attention/Self Attention/CPU/self_attention_cpu.h"
+#include "../Attention/Self Attention/CPU/mask_cpu.h"
