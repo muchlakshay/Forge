@@ -5,97 +5,72 @@
 template<typename T>
 concept isSubscriptable = requires (T a) {a[0];a.size();};
 
-template<typename T>
-void print_vec(T& vec) {
-    for (auto e : vec) std::cout << e << " ";
-};
-
-template<isSubscriptable T, isSubscriptable U>
-auto dimsAfterContract(T A, U B, std::size_t d_A, std::size_t d_B) {
-    const std::size_t num_dims {A.size()+B.size()};
-    std::vector<std::size_t> dims;
-    dims.reserve(num_dims - 2);
-    for (std::size_t i {}; i < A.size(); ++i) {if (i!=d_A) dims.push_back(A[i]);}
-    for (std::size_t i {}; i < B.size(); ++i) {if (i!=d_B) dims.push_back(B[i]);}
-    return dims;
-}
-
-template<isSubscriptable T, isSubscriptable U>
-auto dimsAfterShuffle(T dims, U shuffle_dims_idx) {
-    std::vector<std::size_t> dims_after_shuffle;
-    dims_after_shuffle.reserve(dims.size());
-    for (const auto dim : shuffle_dims_idx) dims_after_shuffle.push_back(dims[dim]);
-    return dims_after_shuffle;
-}
-
-
-void Forge::SelfAttentionCPU::forward(const Tensor input, const Tensor query_W, const Tensor key_W, const Tensor value_W,
-    Tensor output, const Tensor mask, const Linear& linear, std::size_t heads, bool using_mask) const {
+void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W, const Tensor& key_W, const Tensor& value_W,
+    Tensor& output, const Tensor& mask, const Linear& linear, std::size_t heads, std::size_t d_model, bool using_mask) const {
     Softmax softmax;
-
     DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
-        using Device=Eigen::DefaultDevice;
 
-        auto inp_map {input.as_eigen<scalar_t>()};
-        auto Q_W_map {query_W.as_eigen<scalar_t>()};
-        auto K_W_map {key_W.as_eigen<scalar_t>()};
-        auto V_W_map {value_W.as_eigen<scalar_t>()};
+        auto inp_map {input.as_eigen<scalar_t, 3>()};
+        auto Q_W_map {query_W.as_eigen<scalar_t, 3>()};
+        auto K_W_map {key_W.as_eigen<scalar_t, 3>()};
+        auto V_W_map {value_W.as_eigen<scalar_t, 3>()};
 
-        Eigen::array contract_dims_1 {Eigen::IndexPair<std::size_t>(3, 2)};
-        Eigen::array<std::size_t, 4> shuffling_dims {0, 2, 1, 3};
+        auto batch_size {static_cast<std::size_t>(inp_map.dimensions()[0])};
+        auto seq_len {static_cast<std::size_t>(inp_map.dimensions()[1])};
+        auto V_dims {static_cast<std::size_t>(V_W_map.dimensions()[2])};
+        auto Q_K_dims {query_W.shape().back()};
+
+        Eigen::array contract_dims_1 {Eigen::IndexPair<std::size_t>(2, 1)};
         auto Q {inp_map.contract(Q_W_map, contract_dims_1)};
         auto K {inp_map.contract(K_W_map, contract_dims_1)};
         auto V {inp_map.contract(V_W_map, contract_dims_1)};
 
+        Eigen::array<std::size_t, 4> shuffling_dims {0, 2, 1, 3};
         auto Q_T {Q.shuffle(shuffling_dims)};
         auto K_T {K.shuffle(shuffling_dims)};
         auto V_T {V.shuffle(shuffling_dims)};
 
-        Eigen::array<std::size_t, 4> K_shuff_dims {0, 1, 3, 2};
-        auto K_T_shuff {K_T.shuffle(K_shuff_dims)};
+        Tensor Q_dot_K {{batch_size, heads, seq_len, seq_len}};
+        auto Q_dot_K_map {Q_dot_K.as_eigen<scalar_t>()};
+        Eigen::array contract_dims_2 {Eigen::IndexPair<std::size_t>(1, 1)};
 
-        auto V_dims {dimsAfterContract(inp_map.dimensions(), V_W_map.dimensions(), 3, 2)};
-        auto V_T_dims {dimsAfterShuffle(V_dims, shuffling_dims)};
-        std::cout<<"31\n";
-        auto Q_K_dims {dimsAfterContract(inp_map.dimensions(), Q_W_map.dimensions(), 3, 2)};
-        print_vec(Q_K_dims);
-        Tensor temp {{dimsAfterContract(Q_K_dims, dimsAfterShuffle(Q_K_dims, K_shuff_dims), 3, 2)}};
-        std::cout<<"\n43\n";
-        auto temp_map {temp.as_eigen<scalar_t>()};
-        Eigen::array contract_dims_2 {Eigen::IndexPair<std::size_t>(3, 2)};
-        std::cout<<"23\n";
-        std::cout<<temp_map.dimensions();
-        temp_map = Q_T.contract(K_T_shuff, contract_dims_2);
-        std::cout<<"343\n";
+        for (std::size_t B {}; B<batch_size; ++B) {
+            for (std::size_t H {}; H<heads; ++H) {
+                auto Q_slice {Q_T.chip(B, 0).chip(H, 0)};
+                auto K_slice {K_T.chip(B, 0).chip(H, 0)};
+
+                auto atten_scores {Q_slice.contract(K_slice, contract_dims_2)};
+                Q_dot_K_map.chip(B, 0).chip(H, 0) = atten_scores;
+            }
+        }
+        Q_dot_K_map=Q_dot_K_map/Eigen::numext::sqrt(static_cast<scalar_t>(Q_K_dims));
+
         if (using_mask) {
             auto mask_map {mask.as_eigen<scalar_t>()};
-            auto dims {temp_map.dimensions()};
+            auto dims = Q_dot_K_map.dimensions();
             Eigen::array<Eigen::Index, 4> bcast_dims {dims[0], dims[1], 1, 1};
-            temp_map = temp_map.broadcast(bcast_dims);
+            Q_dot_K_map += mask_map.broadcast(bcast_dims);
         }
-        std::cout<<"1\n";
-        auto temp_2 {softmax(temp)};
-        auto temp_2_map {temp_2.as_eigen<scalar_t>()};
-        std::cout<<"2\n";
-        Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(3, 2)};
-        auto attention  {temp_2_map.contract(V_T, contract_dims_3)};
-        std::cout<<"3\n";
-        auto attention_dims {dimsAfterContract(temp_2_map.dimensions(), V_T_dims, 3, 2)};
-        std::cout<<"4\n";
-        auto shuff_atten {attention.shuffle(shuffling_dims)};
-        std::cout<<"5\n";
-        auto shuff_atten_dims {dimsAfterShuffle(attention_dims, shuffling_dims)};
-        std::cout<<"6\n";
+        auto atten_scores {softmax(Q_dot_K)};
+        auto atten_scores_map {atten_scores.as_eigen<scalar_t>()};
 
-        auto& d {shuff_atten_dims};
-        Eigen::array<std::size_t, 4> reshape_dims {1, d[0], d[1], d[2]*d[3]};
+        Tensor atten_dot_V {{batch_size, heads, seq_len, V_dims}};
+        auto atten_dot_V_map {atten_dot_V.as_eigen<scalar_t>()};
+        Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(1, 0)};
 
-        auto concat_expr_ {shuff_atten.reshape(reshape_dims)};
+        for (std::size_t B {}; B<batch_size; ++B) {
+            for (std::size_t H {}; H<heads; ++H) {
+                auto atten_slice {atten_scores_map.chip(B, 0).chip(H, 0)};
+                auto V_slice {V_T.chip(B, 0).chip(H, 0)};
 
-        Tensor concatinated {std::vector<std::size_t>(reshape_dims.begin(), reshape_dims.end()), query_W.dtype()};
-        auto concat_map {concatinated.as_eigen<scalar_t>()};
-        concat_map = concat_expr_;
-        output = linear(concatinated);
+                auto result {atten_slice.contract(V_slice, contract_dims_3)};
+                atten_dot_V_map.chip(B, 0).chip(H, 0) = result;
+            }
+        }
+
+        Eigen::array<std::size_t, 4> reshape_dims {1, batch_size, seq_len, heads * V_dims};
+        atten_dot_V_map = atten_dot_V_map.shuffle(shuffling_dims).reshape(reshape_dims);
+        output = linear(atten_dot_V).reshape(batch_size, seq_len, d_model);
     });
 }
 
