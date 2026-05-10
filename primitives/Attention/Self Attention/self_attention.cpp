@@ -20,6 +20,10 @@ Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, s
 
 Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
     if (m_mask && m_mask_.shape().empty()) throw std::runtime_error("create a mask prior to forward pass");
+    if (auto seq_len {input.shape()[1]}, mask_seq_len {m_mask_.shape()[0]}; m_mask_.shape()[0]!=seq_len)
+        throw std::invalid_argument(
+        std::format("mask with shape ({}, {}) is needed but got of shape ({}, {})", seq_len, seq_len, mask_seq_len, mask_seq_len)
+    );
     Tensor output {};
     const auto* impl {primitive_dispatcher().lookup<SelfAttentionImplAbstract>(primitive_ops::selfAttention, m_dispatch_key)};
     impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_linear, m_heads, m_d_model, m_mask);
