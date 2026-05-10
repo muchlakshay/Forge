@@ -80,8 +80,8 @@ public:
 
     Tensor operator[](std::size_t index);
 
-    template <typename T>
-    Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> as_eigen() const;
+    template <typename T, std::size_t Rank=4>
+    Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>> as_eigen() const;
 
     static Dispatcher<UtilityOps>& dispatcher();
 
@@ -227,12 +227,15 @@ Forge::Tensor& Forge::Tensor::operator=(init_list_3D<T> init_list) {initialize<T
 template<TensorStorageType T>
 Forge::Tensor& Forge::Tensor::operator=(init_list_4D<T> init_list) {initialize<T>(init_list); return *this;}
 
-template <typename T>
-Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
-    Eigen::array<Eigen::Index, 4> eigen_dims;
+template <typename T, std::size_t Rank>
+Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
+    if (Rank<m_shape.size()) throw  std::invalid_argument(std::format("Rank must be at least equal to {}", m_shape.size()));
+    if (Rank>4) throw std::invalid_argument("tensor rank can be 4 at max");
+
+    Eigen::array<Eigen::Index, Rank> eigen_dims;
     eigen_dims.fill(1);
-    for (int i = 0; i < m_shape.size(); i++) eigen_dims[4 - m_shape.size() + i] = m_shape[i];
-    return Eigen::TensorMap<Eigen::Tensor<T, 4, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
+    for (int i = 0; i < m_shape.size(); i++) eigen_dims[Rank - m_shape.size() + i] = m_shape[i];
+    return Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
 }
 
 
