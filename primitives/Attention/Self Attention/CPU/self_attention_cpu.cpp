@@ -20,6 +20,8 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto V_dims {static_cast<std::size_t>(V_W_map.dimensions()[2])};
         auto Q_K_dims {query_W.shape().back()};
 
+        auto dtype {input.dtype()};
+
         Eigen::array contract_dims_1 {Eigen::IndexPair<std::size_t>(2, 1)};
         auto Q {inp_map.contract(Q_W_map, contract_dims_1)};
         auto K {inp_map.contract(K_W_map, contract_dims_1)};
@@ -30,7 +32,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto K_T {K.shuffle(shuffling_dims)};
         auto V_T {V.shuffle(shuffling_dims)};
 
-        Tensor Q_dot_K {{batch_size, heads, seq_len, seq_len}};
+        Tensor Q_dot_K {{batch_size, heads, seq_len, seq_len}, dtype};
         auto Q_dot_K_map {Q_dot_K.as_eigen<scalar_t>()};
         Eigen::array contract_dims_2 {Eigen::IndexPair<std::size_t>(1, 1)};
 
@@ -54,7 +56,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto atten_scores {softmax(Q_dot_K)};
         auto atten_scores_map {atten_scores.as_eigen<scalar_t>()};
 
-        Tensor atten_dot_V {{batch_size, heads, seq_len, V_dims}};
+        Tensor atten_dot_V {{batch_size, heads, seq_len, V_dims}, dtype};
         auto atten_dot_V_map {atten_dot_V.as_eigen<scalar_t>()};
         Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(1, 0)};
 
