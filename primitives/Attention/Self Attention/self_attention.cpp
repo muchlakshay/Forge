@@ -8,7 +8,7 @@
 Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads,
     bool mask, Device device, Dtype dtype, Initializers initializer) : m_query_W {{heads, d_model, Q_K_dims}, dtype, true, device},
     m_key_W{{heads, d_model, Q_K_dims}, dtype, true, device}, m_value_W {{heads, d_model, V_dims}, dtype, true, device},
-    m_linear{V_dims * heads, d_model, Initializers::xavier_normal, m_query_W.dtype(), m_query_W.device(), false},
+    m_linear{V_dims * heads, d_model, Initializers::xavier_normal, dtype, device, false},
     m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_heads{heads}, m_d_model{d_model},
     m_device {device}, m_dtype{dtype}{
 
@@ -20,7 +20,7 @@ Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, s
 
 Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
     if (m_mask && m_mask_.shape().empty()) throw std::runtime_error("create a mask prior to forward pass");
-    if (auto seq_len {input.shape()[1]}, mask_seq_len {m_mask_.shape()[0]}; m_mask_.shape()[0]!=seq_len)
+    if (auto seq_len {input.shape()[0]}, mask_seq_len {m_mask_.shape()[0]}; m_mask_.shape()[0]!=seq_len)
         throw std::invalid_argument(
         std::format("mask with shape ({}, {}) is needed but got of shape ({}, {})", seq_len, seq_len, mask_seq_len, mask_seq_len)
     );
