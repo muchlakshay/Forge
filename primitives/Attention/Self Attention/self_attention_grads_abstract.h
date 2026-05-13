@@ -10,6 +10,6 @@ namespace Forge {
 
 struct Forge::SelfAttentionGradsAbstract : Kernel {
     SelfAttentionGradsAbstract () : Kernel {ctti::type_id<SelfAttentionGradsAbstract>()} {}
-    virtual void compute_grads(Tensor& inp, Tensor& Q_W, Tensor& K_W, Tensor& V_W, Tensor& QcKs, Tensor& atten_scores,
-        Tensor& AcVr, Tensor& mask, Tensor& opt) const = 0;
+    virtual void compute_grads(const Tensor &inp, const Tensor &Q_W, const Tensor &K_W, const Tensor &V_W,
+    const Tensor &QcKs, const Tensor &atten_scores, const Tensor &AcVr, const  Tensor& mask, const Tensor &opt) const = 0;
 };

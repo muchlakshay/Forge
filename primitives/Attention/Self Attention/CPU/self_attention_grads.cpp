@@ -1,9 +1,10 @@
 #include "self_attention_grads_cpu.h"
 #include "tensor.h"
 
-void Forge::SelfAttentionGradsCPU::compute_grads(Tensor &inp, Tensor &Q_W, Tensor &K_W, Tensor &V_W, Tensor &QcKs,
-                                                 Tensor &atten_scores, Tensor &AcVr, Tensor& mask, Tensor &opt) const {
+void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor &Q_W, const Tensor &K_W, const Tensor &V_W,
+    const Tensor &QcKs, const Tensor &atten_scores, const Tensor &AcVr, const  Tensor& mask, const Tensor &opt) const {
     using grads_t = float;
+
     DISPATCH_ALL_TYPES(inp.dtype(), inp.device(), [&] {
         auto inp_map {inp.as_eigen<scalar_t, 3>()};
         auto Q_W_map {Q_W.as_eigen<scalar_t, 3>()};
@@ -75,8 +76,9 @@ void Forge::SelfAttentionGradsCPU::compute_grads(Tensor &inp, Tensor &Q_W, Tenso
         atten_scores.backward();
         if (!mask.shape().empty()) {
             auto mask_map {mask.as_eigen<scalar_t>()};
-            QcKs_grads_map += mask_map;
+            QcKs_grads_map += mask_map.template cast<grads_t>();
         }
+
         auto QcK_grads {QcKs_grads_map*QcKs_grads_map.constant(
             static_cast<grads_t>(1)/Eigen::numext::sqrt(static_cast<grads_t>(Q_K_dims)))};
 
@@ -86,7 +88,7 @@ void Forge::SelfAttentionGradsCPU::compute_grads(Tensor &inp, Tensor &Q_W, Tenso
         for (std::size_t B{}; B<batch_size; ++B) {
             for (std::size_t H{}; H<heads; ++H) {
                 auto QcK_grads_slice {QcK_grads.chip(B, 0).chip(H, 0)};
-                auto K_T_slice{K_T.chip(B, 0).chip(H, 0)};
+                auto K_T_slice{K_T.chip(B, 0).chip(H, 0).template cast<grads_t>()};
                 Q_K_grads_map.chip(B, 0).chip(H, 0) = QcK_grads_slice.contract(K_T_slice, contract_dims_2);
             }
         }
@@ -99,7 +101,7 @@ void Forge::SelfAttentionGradsCPU::compute_grads(Tensor &inp, Tensor &Q_W, Tenso
         for (std::size_t B{}; B<batch_size; ++B) {
             for (std::size_t H{}; H<heads; ++H) {
                 auto QcK_grads_slice {QcK_grads.chip(B, 0).chip(H, 0)};
-                auto Q_T_slice{K_T.chip(B, 0).chip(H, 0)};
+                auto Q_T_slice{K_T.chip(B, 0).chip(H, 0).template cast<grads_t>()};
                 Q_K_grads_map.chip(B, 0).chip(H, 0) = QcK_grads_slice.shuffle(shuffling_dims_3).contract(
                     Q_T_slice, contract_dims_2);
             }
@@ -109,7 +111,6 @@ void Forge::SelfAttentionGradsCPU::compute_grads(Tensor &inp, Tensor &Q_W, Tenso
             K_W_map.shuffle(shuffling_dims_2).template cast<grads_t>(), contract_dims_6);
         if (K_W.need_grads()) K_W_grads_map += inp_map.shuffle(shuffling_dims_2).template cast<grads_t>().contract (
             QcK_grads, contract_dims_7);
-
     });
 }
 //SHAPES FOR MAP REFERENCE
