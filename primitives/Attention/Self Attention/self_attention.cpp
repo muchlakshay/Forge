@@ -8,7 +8,7 @@
 Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads,
     bool mask, Device device, Dtype dtype, Initializers initializer) : m_query_W {{heads, d_model, Q_K_dims}, dtype, true, device},
     m_key_W{{heads, d_model, Q_K_dims}, dtype, true, device}, m_value_W {{heads, d_model, V_dims}, dtype, true, device},
-    m_linear{V_dims * heads, d_model, Initializers::xavier_normal, dtype, device, false},
+    m_linear{V_dims * heads, d_model, initializer, dtype, device, false},
     m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_heads{heads}, m_d_model{d_model},
     m_device {device}, m_dtype{dtype}{
 

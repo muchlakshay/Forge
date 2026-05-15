@@ -120,9 +120,9 @@ public:
 
     [[nodiscard]] auto& grads() const {return m_grads;}
     [[nodiscard]] auto& gradients() const {return *(grads());}
-    void backward(const bool keep_graph=false) const {
+    void backward(const bool keep_graph=false, bool contain_upstream_grads=false) const {
         if (m_node) {
-            grads()->setConstant(1.0f); m_node->backward();
+            if (!contain_upstream_grads) grads()->setConstant(1.0f); m_node->backward();
             if (!keep_graph) m_node.reset();
         }
     }
@@ -229,7 +229,7 @@ Forge::Tensor& Forge::Tensor::operator=(init_list_4D<T> init_list) {initialize<T
 
 template <typename T, std::size_t Rank>
 Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>> Forge::Tensor::as_eigen() const {
-    if (Rank<m_shape.size()) throw  std::invalid_argument(std::format("Rank must be at least equal to {}", m_shape.size()));
+    if (Rank<m_shape.size()) throw std::invalid_argument(std::format("Rank must be at least equal to {}", m_shape.size()));
     if (Rank>4) throw std::invalid_argument("tensor rank can be 4 at max");
 
     Eigen::array<Eigen::Index, Rank> eigen_dims;

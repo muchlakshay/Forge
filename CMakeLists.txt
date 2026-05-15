@@ -21,6 +21,7 @@ add_library(Forge STATIC
         primitives/Optimizers/CPU/optimizersUpdateCPU.cpp
         "primitives/Attention/Self Attention/self_attention.cpp"
         "primitives/Attention/Self Attention/CPU/self_attention_cpu.cpp"
+        "primitives/Attention/Self Attention/CPU/self_attention_grads.cpp"
 )
 
 target_include_directories(Forge PUBLIC

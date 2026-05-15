@@ -1,5 +1,7 @@
 #include "self_attention_cpu.h"
 #include "Activations/activations.h"
+#include "Attention/Self Attention/self_attention_grads_abstract.h"
+#include "autograd/attach_node.h"
 #include "Linear/LinearLayer.h"
 
 template<typename T>
@@ -8,6 +10,7 @@ concept isSubscriptable = requires (T a) {a[0];a.size();};
 void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W, const Tensor& key_W, const Tensor& value_W,
     Tensor& output, const Tensor& mask, const Linear& linear, std::size_t heads, std::size_t d_model, bool using_mask) const {
     Softmax softmax;
+    bool need_grads {input.need_grads() || query_W.need_grads() || key_W.need_grads() || value_W.need_grads()};
     DISPATCH_ALL_TYPES(input.dtype(), Device::CPU, [&] {
 
         auto inp_map {input.as_eigen<scalar_t, 3>()};
@@ -32,7 +35,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto K_T {K.shuffle(shuffling_dims)};
         auto V_T {V.shuffle(shuffling_dims)};
 
-        Tensor Q_dot_K {{batch_size, heads, seq_len, seq_len}, dtype};
+        Tensor Q_dot_K {{batch_size, heads, seq_len, seq_len}, dtype, need_grads};
         auto Q_dot_K_map {Q_dot_K.as_eigen<scalar_t>()};
         Eigen::array contract_dims_2 {Eigen::IndexPair<std::size_t>(1, 1)};
 
@@ -56,7 +59,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto atten_scores {softmax(Q_dot_K)};
         auto atten_scores_map {atten_scores.as_eigen<scalar_t>()};
 
-        Tensor atten_dot_V {{batch_size, heads, seq_len, V_dims}, dtype};
+        Tensor atten_dot_V {{batch_size, heads, seq_len, V_dims}, dtype, need_grads};
         auto atten_dot_V_map {atten_dot_V.as_eigen<scalar_t>()};
         Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(1, 0)};
 
@@ -72,7 +75,13 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
 
         Eigen::array<std::size_t, 4> reshape_dims {1, batch_size, seq_len, heads * V_dims};
         atten_dot_V_map = atten_dot_V_map.shuffle(shuffling_dims).reshape(reshape_dims);
-        output = linear(atten_dot_V).reshape(batch_size, seq_len, d_model);
+        auto opt_l {linear(atten_dot_V)};
+        output = opt_l.reshape(batch_size, seq_len, d_model);
+
+        if (need_grads) {
+           attach_node<SelfAttentionGradsAbstract, 9>(output, input.device(), primitive_dispatcher(),
+            primitive_ops::selfAttention, input, query_W, key_W, value_W, Q_dot_K, atten_scores, atten_dot_V, mask, opt_l);
+        }
     });
 }
 
