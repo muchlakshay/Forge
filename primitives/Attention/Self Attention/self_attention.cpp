@@ -19,6 +19,7 @@ Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, s
 }
 
 Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
+    if (input.shape().size()>3) throw std::invalid_argument("input tensor must be rank 3 at max [batch, seq_len, d_model]");
     if (m_mask && m_mask_.shape().empty()) throw std::runtime_error("create a mask prior to forward pass");
     if (auto seq_len {input.shape()[0]}, mask_seq_len {m_mask_.shape()[0]}; m_mask_.shape()[0]!=seq_len)
         throw std::invalid_argument(
