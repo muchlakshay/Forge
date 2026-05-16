@@ -43,6 +43,10 @@ struct Forge::RegisterPrimitives {
     SGDUpdateCPU sgdUpdate_cpu{};
     AdamUpdateCPU adamUpdate_cpu{};
 
+    SelfAttentionCPU self_attention_cpu{};
+    SelfAttentionGradsCPU self_attention_grads_cpu {};
+    MaskCPU mask_cpu{};
+
     RegisterPrimitives() {
         primitive_dispatcher().register_kernel<LinearAbstract>(&linear_layer_cpu, primitive_ops::linear,DispatchKey::CPU);
         primitive_dispatcher().register_kernel<LinearGradsAbstract>(&linear_grads_cpu, primitive_ops::linear, DispatchKey::CPU_Autodiff);
@@ -78,6 +82,10 @@ struct Forge::RegisterPrimitives {
 
         primitive_dispatcher().register_kernel<SGDUpdateAbstract>(&sgdUpdate_cpu, primitive_ops::SGD, DispatchKey::CPU);
         primitive_dispatcher().register_kernel<AdamUpdateAbstract>(&adamUpdate_cpu, primitive_ops::Adam, DispatchKey::CPU);
+
+        primitive_dispatcher().register_kernel<SelfAttentionImplAbstract>(&self_attention_cpu, primitive_ops::selfAttention, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<MaskAbstract>(&mask_cpu, primitive_ops::SA_mask, DispatchKey::CPU);
+        primitive_dispatcher().register_kernel<SelfAttentionGradsAbstract>(&self_attention_grads_cpu, primitive_ops::selfAttention, DispatchKey::CPU_Autodiff);
     }
 };
 

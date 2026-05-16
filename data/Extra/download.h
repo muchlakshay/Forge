@@ -9,7 +9,7 @@ namespace Forge::Extra {
 }
 
 inline bool Forge::Extra::download_file(const std::string& url, const std::string& output) {
-    const std::string command {"curl -L " + url + " -o " + output};
+    const std::string command {"curl -L --progress-bar " + url + " -o " + output};
     return std::system(command.c_str());
 }
 

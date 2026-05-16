@@ -12,7 +12,7 @@ m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}
     if (bias) m_bias = Tensor::Zeros({1, output_size}, true, dtype, device);
     static const auto* weight_initializer {primitive_dispatcher().lookup<WeightsInitAbstract>(
        primitive_ops::weightsInit, DispatchKey::CPU)};
-    weight_initializer->initialize(m_weights, input_size, output_size, initializer);
+    weight_initializer->initialize(m_weights, m_weights.shape(), initializer);
 }
 
 

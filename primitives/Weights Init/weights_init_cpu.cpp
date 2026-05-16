@@ -1,9 +1,11 @@
 #include "weights_init_cpu.h"
 
-void Forge::WeightsInitCPU::initialize(Tensor& weights, std::size_t input_size, std::size_t output_size,
-    Initializers initializer) const {
+void Forge::WeightsInitCPU::initialize(Tensor& weights, const std::vector<std::size_t>& dims,
+                                       Initializers initializer) const {
     std::random_device device;
     std::mt19937_64 mt{ device() };
+    auto cols {dims.back()};
+    auto rows {dims[dims.size() - 2]};
 
     auto fill {
         [&](auto& storage, auto& dist) {
@@ -16,17 +18,17 @@ void Forge::WeightsInitCPU::initialize(Tensor& weights, std::size_t input_size, 
     };
 
     if (initializer == Initializers::xavier_normal) {
-        std::normal_distribution<> distribution(0, std::sqrt(1.0 / input_size));
+        std::normal_distribution<> distribution(0, std::sqrt(1.0 / static_cast<double>(cols)));
         fill(weights, distribution);
     } else if (initializer == Initializers::xavier_uniform) {
-        const auto limit = std::sqrt(6.0 / (input_size + output_size));
+        const auto limit = std::sqrt(6.0 / static_cast<double>(cols + rows));
         std::uniform_real_distribution distribution(-limit, limit);
         fill(weights, distribution);
     } else if (initializer == Initializers::he_normal) {
-        std::normal_distribution<> distribution(0, std::sqrt(2.0 / input_size));
+        std::normal_distribution<> distribution(0, std::sqrt(2.0 / static_cast<double>(cols)));
         fill(weights, distribution);
     } else if (initializer == Initializers::he_uniform) {
-        auto limit = std::sqrt(6.0 / input_size);
+        auto limit = std::sqrt(6.0 / static_cast<double>(cols));
         std::uniform_real_distribution distribution(-limit, limit);
         fill(weights, distribution);
     } else throw std::invalid_argument("Invalid initializer Type");

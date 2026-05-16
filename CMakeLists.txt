@@ -13,12 +13,15 @@ add_library(Forge STATIC
         primitives/Linear/CPU/LinearGradsCPU.cpp
         primitives/Linear/LinearLayer.cpp
         primitives/Linear/CPU/LinearLayerCPU.cpp
-        primitives/Linear/CPU/weights_init_cpu.cpp
+        "primitives/Weights Init/weights_init_cpu.cpp"
         "primitives/Loss Functions/lossFunctions.cpp"
         "primitives/Loss Functions/CPU/lossFunctionsCPU.cpp"
         "primitives/Loss Functions/CPU/lossFunctionsGrads.cpp"
         primitives/Optimizers/optimizers.cpp
         primitives/Optimizers/CPU/optimizersUpdateCPU.cpp
+        "primitives/Attention/Self Attention/self_attention.cpp"
+        "primitives/Attention/Self Attention/CPU/self_attention_cpu.cpp"
+        "primitives/Attention/Self Attention/CPU/self_attention_grads.cpp"
 )
 
 target_include_directories(Forge PUBLIC
@@ -26,6 +29,7 @@ target_include_directories(Forge PUBLIC
         core/tensor
         C:/Users/MSI/Documents/CPPLibs/ctti/include core/
         core/
+        primitives/
 )
 
 add_executable(main

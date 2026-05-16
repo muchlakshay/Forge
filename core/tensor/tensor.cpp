@@ -35,7 +35,7 @@ Forge::Tensor& Forge::Tensor::operator=(const Tensor& another) {
 }
 
 Forge::Tensor::Tensor(const Tensor &another, NodeContext) : m_device{another.m_device}, m_dtype{another.m_dtype},
-        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
+        m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides}, m_size {another.m_size},
         m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key}, m_node{another.node()} {
     m_grads = another.grads();
 }

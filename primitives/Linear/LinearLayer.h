@@ -1,7 +1,7 @@
 #pragma once
 #include "tensor/tensor.h"
 #include "../Dispatcher/primitive_dispatcher.h"
-#include "../weights_init.h"
+#include "../Weights Init/weights_init.h"
 
 namespace Forge {
     class Linear;
