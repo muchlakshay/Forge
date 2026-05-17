@@ -8,5 +8,5 @@ namespace Forge {
 
 struct Forge::LayerNormGradsAbstract : Kernel {
     LayerNormGradsAbstract() : Kernel{ctti::type_id<LayerNormGradsAbstract>()} {}
-    virtual void compute_grads(const Tensor& input, const Tensor& gamma, const Tensor& beta, Tensor& opt) const = 0;
+    virtual void compute_grads(const Tensor& input, const Tensor& gamma, const Tensor& beta, const Tensor& opt) const = 0;
 };
