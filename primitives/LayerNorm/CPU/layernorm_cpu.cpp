@@ -22,7 +22,7 @@ void Forge::LayerNormImplCPU::forward(const Tensor &input, const Tensor &gamma, 
         auto inp_sub_mean {input_map-row_mean.broadcast(bcast_dims)};
         auto row_variance {inp_sub_mean.square().mean(reduction_dim).reshape(reshape_dims)};
 
-        auto eps {static_cast<scalar_t>(10e-5)};
+        auto eps {static_cast<scalar_t>(1e-5)};
         auto rstd {(row_variance+row_variance.constant(eps)).rsqrt()};
         auto normalized {inp_sub_mean * rstd.broadcast(bcast_dims)};
 

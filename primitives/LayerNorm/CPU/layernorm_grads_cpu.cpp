@@ -28,7 +28,7 @@ void Forge::LayerNormGradsCPU::compute_grads(const Tensor &input, const Tensor &
         auto inp_sub_mean {input_map-row_mean.broadcast(bcast_dims)};
         auto row_variance {inp_sub_mean.square().mean(reduction_dim).reshape(reshape_dims)};
 
-        auto eps {static_cast<scalar_t>(10e-5)};
+        auto eps {static_cast<scalar_t>(1e-5)};
         auto rstd {(row_variance+row_variance.constant(eps)).rsqrt()};
         auto normalized {inp_sub_mean * rstd.broadcast(bcast_dims)};
 
@@ -40,19 +40,13 @@ void Forge::LayerNormGradsCPU::compute_grads(const Tensor &input, const Tensor &
         auto one_by_dmodel {normalized_inp_grads.constant(
             static_cast<grads_t>(1)/static_cast<grads_t>(d_model))};
 
-        auto inp_sub_mean_grads {normalized_inp_grads * rstd};
-        auto sum_of_mean_grads {inp_sub_mean_grads.sum(reduction_dim).reshape(reshape_dims).broadcast(bcast_dims)};
-        input_grads_map += inp_sub_mean_grads;
-        input_grads_map -= sum_of_mean_grads * one_by_dmodel;
+        auto normalized_inp_grads_sum {normalized_inp_grads.sum(reduction_dim).reshape(reshape_dims).broadcast(bcast_dims)};
+        auto rstd_casted {rstd.template cast<grads_t>().broadcast(bcast_dims)};
+        auto d_model_tensor {normalized_inp_grads.constant(static_cast<grads_t>(d_model))};
+        auto normalized_casted {normalized.template cast<grads_t>()};
 
-        auto rstd_casted {rstd.template cast<grads_t>()};
-        auto rstd_grads {normalized_inp_grads * inp_sub_mean.template cast<grads_t>()};
-        auto std_grads {rstd_grads * rstd_casted.cube() * rstd_casted.constant(static_cast<grads_t>(-0.5))};
-        auto inp_sub_mean_grads_var {std_grads.sum(reduction_dim).reshape(reshape_dims).broadcast(bcast_dims) * std_grads.constant(
-            static_cast<grads_t>(1)/static_cast<grads_t>(d_model)) * inp_sub_mean.template cast<grads_t>() * std_grads.constant(
-                static_cast<grads_t>(2))};
-        input_grads_map += inp_sub_mean_grads_var;
-        input_grads_map -= inp_sub_mean_grads_var.sum(reduction_dim).reshape(reshape_dims).broadcast(bcast_dims) * one_by_dmodel;
+        input_grads_map += one_by_dmodel * rstd_casted * ((d_model_tensor * normalized_inp_grads) - normalized_inp_grads_sum - (
+            (normalized_inp_grads * normalized_casted).sum(reduction_dim).reshape(reshape_dims).broadcast(bcast_dims) * normalized_casted));
     });
 }
 
