@@ -1,5 +1,7 @@
 #include "layernorm.h"
 #include "layernorm_abstract.h"
+#include "layernorm_grads_abstract.h"
+#include "autograd/attach_node.h"
 #include "Dispatcher/primitive_dispatcher.h"
 
 Forge::LayerNorm::LayerNorm(std::size_t d_model, const Dtype dtype, const Device &device, const bool need_grads) :
@@ -14,6 +16,12 @@ Forge::Tensor Forge::LayerNorm::operator()(const Tensor &input) {
 
     const auto* impl {primitive_dispatcher().lookup<LayerNormImplAbstract>(primitive_ops::LayerNorm, input.dispatch_key())};
     impl->forward(input, m_gamma, m_beta, opt);
+
+    if (input.need_grads() || gamma().need_grads() || beta().need_grads()) {
+        attach_node<LayerNormGradsAbstract, 3>(opt, m_device, primitive_dispatcher(), primitive_ops::LayerNorm,
+            input, m_gamma, m_beta);
+    }
+
     return opt;
 }
 
