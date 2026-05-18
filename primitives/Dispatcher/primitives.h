@@ -16,3 +16,6 @@
 #include "../Attention/Self Attention/CPU/self_attention_cpu.h"
 #include "../Attention/Self Attention/CPU/mask_cpu.h"
 #include "../Attention/Self Attention/CPU/self_attention_grads_cpu.h"
+#include "../LayerNorm/layernorm.h"
+#include "../LayerNorm/CPU/layernorm_cpu.h"
+#include "../LayerNorm/CPU/layernorm_grads_cpu.h"

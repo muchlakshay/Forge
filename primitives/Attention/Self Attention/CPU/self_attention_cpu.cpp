@@ -77,6 +77,7 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         atten_dot_V_map = atten_dot_V_map.shuffle(shuffling_dims).reshape(reshape_dims);
         auto opt_l {linear(atten_dot_V)};
         output = opt_l.reshape(batch_size, seq_len, d_model);
+        output.gradients() = output.gradients().reshape(batch_size, seq_len, d_model);
 
         if (need_grads) {
            attach_node<SelfAttentionGradsAbstract, 9>(output, input.device(), primitive_dispatcher(),
