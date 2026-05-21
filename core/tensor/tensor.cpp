@@ -102,3 +102,11 @@ void Forge::Tensor::copy(const Tensor& another) {
     const auto* StorageCpy {dispatcher().lookup<StorageCopyAbstract>(UtilityOps::storage_copy, m_dispatch_key)};
     StorageCpy->copy_storage(another.m_storage, m_storage, m_dtype);
 }
+
+Forge::Tensor Forge::Tensor::Random(const std::vector<std::size_t> &shape, Dtype dtype, Initializers initializer, Device device,
+    bool need_grads) {
+    Tensor opt {shape, dtype, need_grads, device};
+    const auto* init {dispatcher().lookup<RandomAbstract>(UtilityOps::random, opt.dispatch_key())};
+    init->randomize(opt, initializer);
+    return opt;
+}

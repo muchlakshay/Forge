@@ -6,15 +6,13 @@
 namespace Forge {
     void register_utility_kernels(Dispatcher<UtilityOps>& dispatcher);
     struct StorageBackend;
-    struct StorageBackendCPU;
     struct ConstantAbstract;
-    struct ConstantCPU;
     struct InitializeAbstract;
-    struct InitializeCPU;
     struct PrintAbstract;
-    struct PrintCPU;
     struct StorageCopyAbstract;
-    struct StorageCopyCPU;
+    struct RandomAbstract;
+
+    class Tensor;
 
     using Scalar = std::variant<
     float,
@@ -56,4 +54,9 @@ struct Forge::StorageCopyAbstract : Kernel {
     StorageCopyAbstract() : Kernel{ctti::type_id<StorageCopyAbstract>()} {}
     virtual void copy_storage(const std::shared_ptr<StorageAbstract>& src, std::shared_ptr<StorageAbstract>& dst,
         Dtype dtype) const = 0;
+};
+
+struct Forge::RandomAbstract : Kernel {
+    RandomAbstract() : Kernel{ctti::type_id<RandomAbstract>()} {}
+    virtual void randomize(Tensor& tensor, Initializers initializer) const = 0;
 };
