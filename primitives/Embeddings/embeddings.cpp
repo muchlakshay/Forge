@@ -20,5 +20,8 @@ Forge::Tensor Forge::Embedding::operator()(const Tensor& seq_ids) {
     const auto* impl {primitive_dispatcher().lookup<EmbeddingsImplAbstract>(primitive_ops::Embeddings, opt.dispatch_key())};
     impl->getEmbeddings(seq_ids, m_embeddings, opt);
 
+    if (m_embeddings.need_grads()) attach_node<EmbeddingsGradsAbstract, 2>(opt, device, primitive_dispatcher(),
+        primitive_ops::Embeddings, seq_ids, m_embeddings);
+
     return opt;
 }
