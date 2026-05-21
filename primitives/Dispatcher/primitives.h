@@ -19,3 +19,6 @@
 #include "../LayerNorm/layernorm.h"
 #include "../LayerNorm/CPU/layernorm_cpu.h"
 #include "../LayerNorm/CPU/layernorm_grads_cpu.h"
+#include "../Embeddings/embeddings.h"
+#include "../Embeddings/CPU/embeddings_cpu.h"
+#include "../Embeddings/CPU/embeddings_grads_cpu.h"
