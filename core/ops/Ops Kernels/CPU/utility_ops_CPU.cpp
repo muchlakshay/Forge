@@ -1,4 +1,5 @@
 #include "UTILITY_OPS_CPU.h"
+#include "Weights Init/weights_init_cpu.h"
 #include <iostream>
 
 void Forge::StorageBackendCPU::getStorageBackend(std::shared_ptr<StorageAbstract>& out, std::size_t size, Dtype dtype) const{
@@ -59,4 +60,9 @@ void Forge::StorageCopyCPU::copy_storage(const std::shared_ptr<StorageAbstract>&
         auto src_downcasted {std::static_pointer_cast<StorageCPU<scalar_t>>(src)};
         dst = std::make_shared<StorageCPU<scalar_t>>(src_downcasted->clone());
     });
+}
+
+void Forge::RandomCPU::randomize(Tensor &tensor, Initializers initializer) const {
+    static WeightsInitCPU weights_init_cpu;
+    weights_init_cpu.initialize(tensor, tensor.shape(), initializer);
 }

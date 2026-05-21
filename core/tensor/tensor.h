@@ -98,7 +98,8 @@ public:
     static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, bool need_grads=true);
     template <typename T>
     static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
-    static Tensor Random();
+    static Tensor Random(const std::vector<std::size_t>& shape, Dtype=Dtype::float32,
+        Initializers initializer=Initializers::xavier_normal, Device device=Device::CPU, bool need_grads=true);
 
     void copy(const Tensor& another);
 

@@ -2,10 +2,8 @@
 #include <random>
 #include "ops/Dispatcher/kernel_base.h"
 #include "tensor.h"
-#include "../Dispatcher/primitive_dispatcher.h"
 
 namespace Forge {
-    enum class Initializers{xavier_normal, xavier_uniform, he_normal, he_uniform};
     struct WeightsInitAbstract;
     struct WeightsInitCPU;
 }
