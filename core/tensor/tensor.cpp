@@ -1,8 +1,10 @@
 #include "tensor.h"
 
+#include "autograd/attach_node.h"
+
 Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype, bool need_grads,
-        Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_strides(shape.size(), 0), m_need_grads{need_grads},
-        m_dispatch_key {device==Device::CPU?DispatchKey::CPU : DispatchKey::CUDA}{
+                      Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_strides(shape.size(), 0), m_need_grads{need_grads},
+                                              m_dispatch_key {device==Device::CPU?DispatchKey::CPU : DispatchKey::CUDA}{
 
     std::size_t size {1u};
     for (int i = shape.size()-1; i>=0; i--) {
@@ -108,5 +110,22 @@ Forge::Tensor Forge::Tensor::Random(const std::vector<std::size_t> &shape, Dtype
     Tensor opt {shape, dtype, need_grads, device};
     const auto* init {dispatcher().lookup<RandomAbstract>(UtilityOps::random, opt.dispatch_key())};
     init->randomize(opt, initializer);
+    return opt;
+}
+
+Forge::Tensor Forge::Tensor::BroadcastAdd(const Tensor &another, const std::vector<int> &bcast_dims) {
+    if (bcast_dims.empty()) throw std::invalid_argument("bcast_dims is empty");
+    if (bcast_dims.size()>4) throw std::invalid_argument("bcast_dims size cant be more then 4");
+    if (m_device!=another.m_device) throw std::invalid_argument("argument Tensor resides on different device");
+    if (m_dtype != another.m_dtype) throw std::invalid_argument("argument Tensor have different dtype");
+
+    Tensor opt {{m_shape}, m_dtype, m_need_grads || another.need_grads(), m_device};
+    const auto* impl {dispatcher().lookup<BroadcastAddAbstract>(UtilityOps::bcast_add, m_dispatch_key)};
+    impl->add(*this, another, bcast_dims, opt);
+    if (opt.need_grads()) {
+        auto bcast_dims_tensor {FromHostPtr(const_cast<int*>(bcast_dims.data()), {bcast_dims.size()}, false).clone()};
+        attach_node<BroadcastAddGradsAbstract, 3>(opt, m_device, dispatcher(),
+        UtilityOps::bcast_add, *this, another, bcast_dims_tensor);
+    }
     return opt;
 }

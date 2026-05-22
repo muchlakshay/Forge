@@ -11,6 +11,8 @@ namespace Forge {
     struct PrintAbstract;
     struct StorageCopyAbstract;
     struct RandomAbstract;
+    struct BroadcastAddAbstract;
+    struct BroadcastAddGradsAbstract;
 
     class Tensor;
 
@@ -59,4 +61,14 @@ struct Forge::StorageCopyAbstract : Kernel {
 struct Forge::RandomAbstract : Kernel {
     RandomAbstract() : Kernel{ctti::type_id<RandomAbstract>()} {}
     virtual void randomize(Tensor& tensor, Initializers initializer) const = 0;
+};
+
+struct Forge::BroadcastAddAbstract : Kernel {
+    BroadcastAddAbstract() : Kernel{ctti::type_id<BroadcastAddAbstract>()} {}
+    virtual void add(const Tensor& A, const Tensor& B, const std::vector<int>& bcast_dims, Tensor& opt) const = 0;
+};
+
+struct Forge::BroadcastAddGradsAbstract : Kernel {
+    BroadcastAddGradsAbstract() : Kernel{ctti::type_id<BroadcastAddGradsAbstract>()} {}
+    virtual void compute_grads(const Tensor& A, const Tensor& B, const Tensor& bcast_dims, const Tensor& opt) const = 0;
 };

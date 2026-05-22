@@ -8,7 +8,7 @@ namespace Forge {
 }
 
 template <ValidEnum T>
-inline void Forge::register_all_kernels(Dispatcher<T> &dispatcher) {
+void Forge::register_all_kernels(Dispatcher<T> &dispatcher) {
     register_utility_kernels(dispatcher);
 }
 
@@ -20,6 +20,8 @@ inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) 
     static PrintCPU printCPU{};
     static StorageCopyCPU storageCopyCPU{};
     static RandomCPU randomCPU{};
+    static BroadcastAddCPU broadcastAddCPU{};
+    static BroadcastAddGradsCPU broadcastAddGradsCPU{};
 
     dispatcher.register_kernel<StorageBackend>(&storageBackendCPU, UtilityOps::storage_backend, DispatchKey::CPU);
     dispatcher.register_kernel<ConstantAbstract>(&constantCPU, UtilityOps::constant, DispatchKey::CPU);
@@ -27,4 +29,6 @@ inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) 
     dispatcher.register_kernel<PrintAbstract>(&printCPU, UtilityOps::print, DispatchKey::CPU);
     dispatcher.register_kernel<StorageCopyAbstract>(&storageCopyCPU, UtilityOps::storage_copy, DispatchKey::CPU);
     dispatcher.register_kernel<RandomAbstract>(&randomCPU, UtilityOps::random, DispatchKey::CPU);
+    dispatcher.register_kernel<BroadcastAddAbstract>(&broadcastAddCPU, UtilityOps::bcast_add, DispatchKey::CPU);
+    dispatcher.register_kernel<BroadcastAddGradsAbstract>(&broadcastAddGradsCPU, UtilityOps::bcast_add, DispatchKey::CPU_Autodiff);
 }

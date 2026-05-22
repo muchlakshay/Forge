@@ -10,6 +10,8 @@ namespace Forge {
     struct PrintCPU;
     struct StorageCopyCPU;
     struct RandomCPU;
+    struct BroadcastAddCPU;
+    struct BroadcastAddGradsCPU;
 };
 
 struct Forge::StorageBackendCPU : StorageBackend {
@@ -63,4 +65,12 @@ struct Forge::StorageCopyCPU final : StorageCopyAbstract {
 
 struct Forge::RandomCPU final : RandomAbstract {
     void randomize(Tensor& tensor, Initializers initializer) const override;
+};
+
+struct Forge::BroadcastAddCPU : BroadcastAddAbstract {
+  void add(const Tensor &A, const Tensor &B, const std::vector<int>& bcast_dims,  Tensor &opt) const override;
+};
+
+struct Forge::BroadcastAddGradsCPU : BroadcastAddGradsAbstract {
+    void compute_grads(const Tensor &A, const Tensor &B, const Tensor& bcast_dims, const Tensor &opt) const override;
 };
