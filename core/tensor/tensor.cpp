@@ -23,7 +23,7 @@ Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype,
 
 Forge::Tensor::Tensor(const Tensor &another) : m_device{another.m_device}, m_dtype{another.m_dtype},
         m_storage {another.m_storage}, m_shape{another.m_shape}, m_strides {another.m_strides},
-        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key} {
+        m_need_grads {another.m_need_grads}, m_dispatch_key{another.m_dispatch_key}, m_size {another.m_size} {
     if (m_need_grads) {
         m_grads = std::make_shared<Tensor>(m_shape, Dtype::float32, false, m_device);
         grads()->setConstant(0.f);
