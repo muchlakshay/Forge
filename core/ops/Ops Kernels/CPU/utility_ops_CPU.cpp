@@ -80,28 +80,34 @@ void Forge::BroadcastAddCPU::add(const Tensor &A, const Tensor &B, const std::ve
 
 void Forge::BroadcastAddGradsCPU::compute_grads(const Tensor &A, const Tensor &B, const Tensor& bcast_dims, const Tensor &opt) const {
     using grads_t = float;
-    auto* data_ptr {static_cast<int64_t*>(bcast_dims.data())};
+    auto* data_ptr {static_cast<int*>(bcast_dims.data())};
 
     std::vector<Eigen::Index> rd;
-    for (int i {}; i<bcast_dims.size(); ++i) {if (data_ptr[i]!=1) rd.push_back(static_cast<Eigen::Index>(data_ptr[i])); }
-    auto B_grads_map {B.gradients().as_eigen<grads_t>()};
+    for (int i {}; i<bcast_dims.size(); ++i) {if (data_ptr[i]!=1) rd.push_back(i); }
+
     auto opt_grads_map {opt.gradients().as_eigen<grads_t>()};
 
-    A.gradients() = opt.gradients();
+    if (A.need_grads()) A.gradients() = opt.gradients();
 
-    switch (rd.size()) {
-        case 1:
-            B_grads_map += opt_grads_map.sum(Eigen::array{rd[0]}).reshape(B_grads_map.dimensions());
-            break;
-        case 2:
-            B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1]}).reshape(B_grads_map.dimensions());
-            break;
-        case 3:
-            B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1], rd[2]}).reshape(B_grads_map.dimensions());
-            break;
-        case 4:
-            B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1], rd[2], rd[3]}).reshape(B_grads_map.dimensions());
-            break;
-        default: ;
+    if (B.need_grads()) {
+        auto B_grads_map {B.gradients().as_eigen<grads_t>()};
+        switch (rd.size()) {
+            case 0:
+                B_grads_map = opt_grads_map;
+                break;
+            case 1:
+                B_grads_map += opt_grads_map.sum(Eigen::array{rd[0]}).reshape(B_grads_map.dimensions());
+                break;
+            case 2:
+                B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1]}).reshape(B_grads_map.dimensions());
+                break;
+            case 3:
+                B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1], rd[2]}).reshape(B_grads_map.dimensions());
+                break;
+            case 4:
+                B_grads_map += opt_grads_map.sum(Eigen::array{rd[0], rd[1], rd[2], rd[3]}).reshape(B_grads_map.dimensions());
+                break;
+            default: ;
+        }
     }
 }
