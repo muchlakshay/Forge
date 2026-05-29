@@ -45,16 +45,19 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
                 auto K_slice {K_T.chip(B, 0).chip(H, 0)};
 
                 auto atten_scores {Q_slice.contract(K_slice, contract_dims_2)};
-                Q_dot_K_map.chip(B, 0).chip(H, 0) = atten_scores;
+
+                auto Q_dot_K_map_slice {Q_dot_K_map.chip(B, 0).chip(H, 0)};
+                forge_eval(Q_dot_K_map_slice, atten_scores);
             }
         }
-        Q_dot_K_map=Q_dot_K_map/Eigen::numext::sqrt(static_cast<scalar_t>(Q_K_dims));
+
+        forge_eval(Q_dot_K_map, Q_dot_K_map * static_cast<scalar_t>(1)/Eigen::numext::sqrt(static_cast<scalar_t>(Q_K_dims)));
 
         if (using_mask) {
             auto mask_map {mask.as_eigen<scalar_t>()};
             auto dims = Q_dot_K_map.dimensions();
             Eigen::array<Eigen::Index, 4> bcast_dims {dims[0], dims[1], 1, 1};
-            Q_dot_K_map += mask_map.broadcast(bcast_dims);
+            forge_eval(Q_dot_K_map, Q_dot_K_map+ mask_map.broadcast(bcast_dims));
         }
         auto atten_scores {softmax(Q_dot_K)};
         auto atten_scores_map {atten_scores.as_eigen<scalar_t>()};
@@ -63,25 +66,31 @@ void Forge::SelfAttentionCPU::forward(const Tensor& input, const Tensor& query_W
         auto atten_dot_V_map {atten_dot_V.as_eigen<scalar_t>()};
         Eigen::array contract_dims_3 {Eigen::IndexPair<std::size_t>(1, 0)};
 
+
         for (std::size_t B {}; B<batch_size; ++B) {
             for (std::size_t H {}; H<heads; ++H) {
                 auto atten_slice {atten_scores_map.chip(B, 0).chip(H, 0)};
                 auto V_slice {V_T.chip(B, 0).chip(H, 0)};
 
                 auto result {atten_slice.contract(V_slice, contract_dims_3)};
-                atten_dot_V_map.chip(B, 0).chip(H, 0) = result;
+                auto atten_dot_V_map_slice {atten_dot_V_map.chip(B, 0).chip(H, 0)};
+                forge_eval(atten_dot_V_map_slice, result);
             }
         }
-
+        Tensor atten_dot_V_reshaped {{batch_size, seq_len, heads * V_dims}, dtype, need_grads};
+        auto atten_dot_V_reshaped_map {atten_dot_V_reshaped.as_eigen<scalar_t>()};
         Eigen::array<std::size_t, 4> reshape_dims {1, batch_size, seq_len, heads * V_dims};
-        atten_dot_V_map = atten_dot_V_map.shuffle(shuffling_dims).reshape(reshape_dims);
-        auto opt_l {linear(atten_dot_V)};
+        auto AdVr {atten_dot_V_map.shuffle(shuffling_dims).reshape(reshape_dims)};
+        forge_eval(atten_dot_V_reshaped_map, AdVr);
+
+
+        auto opt_l {linear(atten_dot_V_reshaped)};
         output = opt_l.reshape(batch_size, seq_len, d_model);
         output.gradients() = output.gradients().reshape(batch_size, seq_len, d_model);
 
         if (need_grads) {
            attach_node<SelfAttentionGradsAbstract, 9>(output, input.device(), primitive_dispatcher(),
-            primitive_ops::selfAttention, input, query_W, key_W, value_W, Q_dot_K, atten_scores, atten_dot_V, mask, opt_l);
+            primitive_ops::selfAttention, input, query_W, key_W, value_W, Q_dot_K, atten_scores, atten_dot_V_reshaped, mask, opt_l);
         }
     });
 }
