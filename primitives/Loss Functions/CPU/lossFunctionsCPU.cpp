@@ -1,4 +1,5 @@
 #include "lossFunctionsCPU.h"
+#include "execution_ctx.h"
 #include <iostream>
 
 void Forge::MSE_CPU::compute_loss(const Tensor &pred, const Tensor &ground_truth, Tensor &loss) const {
@@ -13,9 +14,25 @@ void Forge::MSE_CPU::compute_loss(const Tensor &pred, const Tensor &ground_truth
 
 void Forge::CrossEntropyCPU::compute_loss(const Tensor &pred, const Tensor &ground_truth, Tensor &loss) const {
     auto loss_map {loss.as_eigen<float>()};
+    Tensor log_softmax_eval {{pred.shape()}, pred.dtype(), false, pred.device()};
+    Tensor row_max_eval {{pred.shape()}, pred.dtype(), false, pred.device()};
+    Tensor logsumexp_eval {{pred.shape()}, pred.dtype(), false, pred.device()};
+
     DISPATCH_ALL_TYPES(pred.dtype(), Device::CPU, [&] {
         auto pred_map {pred.as_eigen<scalar_t>()};
+        auto pdims {pred_map.dimensions()};
+        pred_map = pred_map.reshape(Eigen::array<Eigen::Index, 4>{1, 1, pdims[0]*pdims[1]*pdims[2], pdims[3]});
+
         auto ground_truth_map {ground_truth.as_eigen<scalar_t>()};
+
+        auto log_softmax_eval_map {log_softmax_eval.as_eigen<scalar_t>()};
+        log_softmax_eval_map = log_softmax_eval_map.reshape(pred_map.dimensions());
+
+        auto row_max_eval_map {row_max_eval.as_eigen<scalar_t>()};
+        row_max_eval_map = row_max_eval_map.reshape(pred_map.dimensions());
+
+        auto logsumexp_eval_map {logsumexp_eval.as_eigen<scalar_t>()};
+        logsumexp_eval_map = logsumexp_eval_map.reshape(pred_map.dimensions());
 
         auto& dims {pred_map.dimensions()};
         Eigen::array<Eigen::Index, 1> class_dim {3};
@@ -24,11 +41,32 @@ void Forge::CrossEntropyCPU::compute_loss(const Tensor &pred, const Tensor &grou
         Eigen::array<Eigen::Index, 1> batch_dim {2};
 
         auto row_max {pred_map.maximum(class_dim).reshape(keep_dim).broadcast(bcast)};
-        auto shifted {pred_map - row_max};
-        auto logsumexp {shifted.exp().sum(class_dim).log().reshape(keep_dim).broadcast(bcast)};
-        auto log_softmax {shifted-logsumexp};
+        forge_eval(row_max_eval_map, row_max);
 
-        auto NLL {-(ground_truth_map * log_softmax).sum()};
+        auto shifted {pred_map - row_max_eval_map};
+        auto logsumexp {shifted.exp().sum(class_dim).log().reshape(keep_dim).broadcast(bcast)};
+        forge_eval(logsumexp_eval_map, logsumexp);
+
+        forge_eval(log_softmax_eval_map, (shifted-logsumexp_eval_map));
+
+        if (ground_truth.dtype() == Dtype::int32 && ground_truth.shape().size()==(pred.shape().size()-1)) {
+
+            auto idx_map {ground_truth.as_eigen<int>()};
+            idx_map =  idx_map.reshape(Eigen::array<Eigen::Index, 4>{1, 1, 1, idx_map.size()});
+            scalar_t NLL {};
+            for (std::size_t B {}; B<idx_map.size(); B++) {
+                NLL = NLL - log_softmax_eval_map(0, 0, B, idx_map(B));
+            }
+
+            Eigen::Tensor<scalar_t, 0, Eigen::RowMajor> NLL_val {};
+            NLL_val.setValues({NLL});
+            loss_map(0, 0, 0, 0) = static_cast<float>(NLL_val()) / static_cast<float>(idx_map.size());
+            return;
+        }
+
+        ground_truth_map = ground_truth_map.reshape(pred_map.dimensions());
+
+        auto NLL {-(ground_truth_map * log_softmax_eval_map).sum()};
         Eigen::Tensor<scalar_t, 0, Eigen::RowMajor> NLL_val {NLL};
         loss_map(0, 0, 0, 0) = static_cast<float>(NLL_val()) / static_cast<float>(dims[batch_dim[0]]);
     });
