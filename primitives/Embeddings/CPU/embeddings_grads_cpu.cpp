@@ -24,4 +24,5 @@ void Forge::EmbeddingsGradsCPU::compute_grads(const Tensor &seq_ids, const Tenso
         }
         for (; d<d_model; d++) embd_grads_row[d]   += opt_grads_row[d];
     }
+    all_embeddings.gradients()[0].setConstant(0.0f);
 }
