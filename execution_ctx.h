@@ -1,4 +1,6 @@
 #pragma once
+#define EIGEN_USE_THREADS
+#define EIGEN_USE_BLAS
 #include <unsupported/Eigen/CXX11/ThreadPool>
 #include <unsupported/Eigen/CXX11/Tensor>
 
@@ -6,6 +8,7 @@ namespace Forge {
     struct ExecutionCtx {
         bool use_MultiThreading{};
         int threads {};
+        Eigen::DefaultDevice default_device;
         std::unique_ptr<Eigen::ThreadPool> thread_pool {};
         std::unique_ptr<Eigen::ThreadPoolDevice> thread_pool_device {};
 
@@ -27,11 +30,14 @@ namespace Forge {
 
     inline ExecutionCtx global_exeCtx;
 
+
 }
 
-#define forge_eval(dest_map, eigen_expr) ( \
+#define forge_eval(dest_map, eigen_expr) \
     do { \
-        if (Forge::global_exeCtx.use_MultiThreading) \
-            (dest_map).device(*Forge::global_exeCtx.thread_pool_device) = (eigen_expr)); \
-        else dest_map = eigen_expr) \
-    while (0)
+        if (Forge::global_exeCtx.use_MultiThreading) { \
+            (dest_map).device(*Forge::global_exeCtx.thread_pool_device) = (eigen_expr); \
+        } else { \
+            dest_map= eigen_expr; \
+        } \
+    } while (0)
