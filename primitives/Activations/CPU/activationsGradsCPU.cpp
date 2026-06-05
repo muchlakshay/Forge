@@ -9,7 +9,8 @@ void Forge::ReluGradsCPU::compute_grads(const Tensor& preactivations, const Tens
 
         auto zero {preact_map.constant(static_cast<scalar_t>(0))};
         auto one  {preact_map.constant(static_cast<scalar_t>(1))};
-        preact_grads_map += act_grads_map*((preact_map>zero).select(one, zero)).template cast<grads_t>();
+
+        forge_eval(preact_grads_map, preact_grads_map+act_grads_map*((preact_map>zero).select(one, zero)).template cast<grads_t>());
     });
 }
 
@@ -23,7 +24,7 @@ void Forge::LeakyReluGradsCPU::compute_grads(const Tensor& preactivations, const
       auto alpha {preact_map.constant(static_cast<scalar_t>(0.01))};
       auto one  {preact_map.constant(static_cast<scalar_t>(1))};
 
-      preact_grads_map += act_grads_map*((preact_map>static_cast<scalar_t>(0)).select(one, alpha)).template cast<grads_t>();
+      forge_eval(preact_grads_map, preact_grads_map+act_grads_map*((preact_map>static_cast<scalar_t>(0)).select(one, alpha)).template cast<grads_t>());
   });
 }
 
@@ -46,7 +47,7 @@ void Forge::GeluGradsCPU::compute_grads(const Tensor& preactivations, const Tens
       const auto sech2 {one-tanh_u.square()};
       const auto term2 {half*preact_map*sech2*k*(one+three*c*preact_sqr)};
 
-      preact_grads_map += act_grads_map*(term1+term2).template cast<grads_t>();
+      forge_eval(preact_grads_map, preact_grads_map + act_grads_map*(term1+term2).template cast<grads_t>());
     });
 }
 
@@ -65,7 +66,8 @@ void Forge::SoftmaxGradsCPU::compute_grads(const Tensor& logits, const Tensor& a
 
         auto dot_reshaped {dot.reshape(reshape_dims)};
         Eigen::array<Eigen::Index, 4> broadcast_dims {1, 1, 1, dims[3]};
-        logits_grads_map += act_map_f * (act_grads_map-dot_reshaped.broadcast(broadcast_dims));
+
+        forge_eval(logits_grads_map, logits_grads_map + act_map_f * (act_grads_map-dot_reshaped.broadcast(broadcast_dims)));
     });
 }
 
@@ -76,7 +78,7 @@ void Forge::SigmoidGradsCPU::compute_grads(const Tensor& preactivations, const T
         auto act_grads_map {activations.gradients().as_eigen<grads_t>()};
         auto act_map{activations.as_eigen<scalar_t>()};
 
-        preact_grads_map += act_grads_map * (act_map*(static_cast<scalar_t>(1)-act_map)).template cast<grads_t>();
+        forge_eval(preact_grads_map, preact_grads_map + act_grads_map * (act_map*(static_cast<scalar_t>(1)-act_map)).template cast<grads_t>());
     });
 }
 
@@ -86,6 +88,6 @@ void Forge::TanhGradsCPU::compute_grads(const Tensor& preactivations, const Tens
         auto preact_grads_map {preactivations.gradients().as_eigen<grads_t>()};
         auto act_grads_map {activations.gradients().as_eigen<grads_t>()};
         auto act_map{activations.as_eigen<scalar_t>()};
-        preact_grads_map += act_grads_map * (static_cast<scalar_t>(1)-act_map.square()).template cast<grads_t>();
+        forge_eval(preact_grads_map, preact_grads_map+act_grads_map * (static_cast<scalar_t>(1)-act_map.square()).template cast<grads_t>());
     });
 }
