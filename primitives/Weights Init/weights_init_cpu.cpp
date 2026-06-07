@@ -8,11 +8,11 @@ void Forge::WeightsInitCPU::initialize(Tensor& weights, const std::vector<std::s
     auto rows {dims[dims.size() - 2]};
 
     auto fill {
-        [&](auto& storage, auto& dist) {
+        [&](auto& W, auto& dist) {
             DISPATCH_ALL_TYPES(weights.dtype(), Device::CPU,
                 [&] {
-                    auto* casted_ptr {static_cast<scalar_t*>(weights.data())};
-                    for (std::size_t i {}; i<weights.size(); ++i)
+                    auto* casted_ptr {static_cast<scalar_t*>(W.data())};
+                    for (std::size_t i {}; i<W.size(); ++i)
                         casted_ptr[i] = static_cast<scalar_t>(dist(mt));
                 });}
     };
