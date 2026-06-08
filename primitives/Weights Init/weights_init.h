@@ -10,6 +10,5 @@ namespace Forge {
 
 struct Forge::WeightsInitAbstract : Kernel {
     WeightsInitAbstract() : Kernel{ctti::type_id<WeightsInitAbstract>()} {}
-    virtual void initialize(Tensor& weights, const std::vector<std::size_t>& dims,
-        Initializers initializer) const = 0;
+    virtual void initialize(Tensor& weights, Initializers initializer) const = 0;
 };

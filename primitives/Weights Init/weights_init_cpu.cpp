@@ -1,11 +1,12 @@
 #include "weights_init_cpu.h"
 
-void Forge::WeightsInitCPU::initialize(Tensor& weights, const std::vector<std::size_t>& dims,
-                                       Initializers initializer) const {
+void Forge::WeightsInitCPU::initialize(Tensor& weights, Initializers initializer) const {
     std::random_device device;
     std::mt19937_64 mt{ device() };
+    auto dims {weights.shape()};
+    auto d_size {dims.size()};
     auto cols {dims.back()};
-    auto rows {dims[dims.size() - 2]};
+    auto rows {d_size>=2?dims[d_size - 2]:1};
 
     auto fill {
         [&](auto& W, auto& dist) {
