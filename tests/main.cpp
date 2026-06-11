@@ -4,6 +4,69 @@
 #include "ops/Maths/cpu_blas.h"
 #include <chrono>
 
+std::string read_file(const std::string& file_name) {
+    std::ifstream file(file_name);
+    if (!file.is_open()) throw std::runtime_error("File could not be opened");
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+auto get_token_ids(const std::string& file_name, SimpleTokenizer& tk){
+    static bool loaded {};
+    if (!loaded) {
+        tk.load(R"(C:\Users\MSI\CLionProjects\Forge\tests\saved_2.tok)");
+        // tk.on_file(R"(C:\Users\MSI\CLionProjects\Forge\tests\text.txt)", 5000);
+        // tk.save(R"(C:\Users\MSI\CLionProjects\Forge\tests\saved_2.tok)");
+        loaded = true;
+    }
+
+    auto train_text {read_file(file_name)};
+    auto tok_ids_eigen {tk.encode(train_text)};
+    std::vector<int> token_ids_vec {tok_ids_eigen.data(), tok_ids_eigen.data()+tok_ids_eigen.size()};
+    return token_ids_vec;
+}
+
+auto get_prediction_tokens(Forge::Tensor& predictions, SimpleTokenizer& tk) {
+    std::string result_string {};
+    auto pred_map {predictions.as_eigen<float, 4>()};
+    auto seq_len {pred_map.dimensions()[2]};
+
+    std::vector<Eigen::Index> argmax_indices(seq_len);
+
+    Eigen::TensorMap<Eigen::Tensor<Eigen::Index, 1, Eigen::RowMajor>> argmax_map(argmax_indices.data(), seq_len);
+
+    argmax_map = pred_map.argmax(3).reshape(Eigen::array{static_cast<Eigen::Index>(seq_len)});
+
+    auto token_ids {tk.getIds()};
+    for (std::size_t i = 0; i < seq_len; ++i) {
+        int predicted_token_id = static_cast<int>(argmax_map(i));
+
+        for (auto& m : token_ids) {
+            if (m.second == predicted_token_id) {
+                result_string += m.first;
+                break;
+            }
+        }
+    }
+    return result_string;
+}
+
+
+auto get_prediction_token(Forge::Tensor& pred, SimpleTokenizer& tk) {
+    auto last_row {static_cast<float*>(pred.data())+ (pred.shape()[0]-1)*pred.shape()[1]};
+    int argmax {};
+    float val {*last_row};
+    for (std::size_t i {}; i<pred.shape()[1]; ++i) {
+        if (last_row[i]>val) {
+            argmax = static_cast<int>(i);
+            val = last_row[i];
+        }
+    }
+    for (auto& m : tk.getIds()) {
+        if (m.second==argmax) return m.first;
+    }
+}
 
 struct Model {
     Forge::Embedding m_embed;
@@ -106,6 +169,7 @@ struct Model {
 };
 
 int main() {
+
 
     return 0;
 }
