@@ -306,6 +306,266 @@ output.backward(true);  // Second backward pass
 
 ---
 
+# Linear Layer Documentation
+
+## Linear Class Overview
+
+The **Linear** layer is a fully connected (dense) layer that applies an affine transformation to the input. It's one of the fundamental building blocks in neural networks, implementing the operation:
+
+```
+output = input @ weights^T + bias
+```
+
+Where:
+- **input** has shape `(batch_size, ..., input_features)` (supports up to 4D tensors)
+- **weights** has shape `(input_features, output_features)`
+- **bias** has shape `(1, 1, 1, output_features)` (broadcasted)
+- **output** has shape `(batch_size, ..., output_features)`
+
+### Internal Components
+
+```cpp
+class Linear {
+    Tensor m_weights;              // Shape: (input_size, output_size)
+    Tensor m_bias;                 // Shape: (1, 1, 1, output_size)
+    DispatchKey m_dispatch_key;    // CPU or GPU dispatch key
+    std::size_t m_input_size;      // Number of input features
+    std::size_t m_output_size;     // Number of output features
+    bool m_using_bias;             // Use bias or not
+    Dtype m_dtype;                 // Data type (float32, float64, etc.)
+    Device m_device;               // Device (CPU or GPU)
+};
+```
+
 ---
+
+## Creating a Linear Layer
+
+### Basic Constructor
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+// Create a linear layer: 128 input features -> 64 output features
+// Uses Xavier Normal initialization by default
+Linear linear_1(128, 64);
+
+// With custom data type
+Linear linear_2(256, 128, Initializers::he_normal, Dtype::float32);
+
+// Without bias term
+Linear linear_no_bias(100, 50, Initializers::xavier_normal, Dtype::float32, Device::CPU, false);
+```
+
+### Constructor Parameters
+
+```cpp
+Linear(
+    std::size_t input_size,                    // Number of input features
+    std::size_t output_size,                   // Number of output features
+    Initializers initializer = Initializers::xavier_normal,  // Weight initialization
+    Dtype dtype = Dtype::float32,              // Data type
+    Device device = Device::CPU,               // Device (CPU/GPU)
+    bool bias = true                           // Use bias term?
+);
+```
+
+### Weight Initialization Strategies
+
+```cpp
+// Xavier Normal: Good for networks with sigmoid/tanh activations
+Linear layer_xavier(128, 64, Initializers::xavier_normal);
+
+// He Normal: Recommended for ReLU-based networks
+Linear layer_he(128, 64, Initializers::he_normal);
+
+// Xavier Uniform: Uniform distribution variant
+Linear layer_xu(128, 64, Initializers::xavier_uniform);
+
+// He Uniform: He initialization with uniform distribution
+Linear layer_hu(128, 64, Initializers::he_uniform);
+```
+
+---
+
+## Using Linear Layers
+
+### Forward Pass
+
+```cpp
+// Create layer and input
+Linear fc(784, 128);
+Tensor input({32, 784});  // batch_size=32, features=784
+
+// Forward pass using operator()
+Tensor output = fc(input);  // Returns shape: (32, 128)
+
+std::cout << "Input shape: ";
+for (auto s : input.shape()) std::cout << s << " ";
+std::cout << "\nOutput shape: ";
+for (auto s : output.shape()) std::cout << s << " ";
+std::cout << "\n";
+```
+
+### Accessing Weights and Bias
+
+```cpp
+Linear layer(64, 32);
+
+// Get read-only references
+const auto& weights = layer.weights();     // Shape: (64, 32)
+const auto& bias = layer.bias();           // Shape: (1, 1, 1, 32)
+
+// Get mutable references for optimization
+auto& weights_mut = layer.weights();
+auto& bias_mut = layer.bias();
+
+// Inspect dimensions
+std::size_t in_size = layer.input_size();   // 64
+std::size_t out_size = layer.output_size(); // 32
+
+// Print shapes
+std::cout << "Weights shape: " << weights.shape()[0] << " x " << weights.shape()[1] << "\n";
+std::cout << "Bias shape: " << bias.size() << " elements\n";
+```
+
+### Manual Weight Inspection and Modification
+
+```cpp
+Linear layer(10, 5);
+
+// Access weights via Eigen
+auto w_map = layer.weights().as_eigen<float, 2>();
+
+// Print weight matrix
+std::cout << "Weight matrix:\n";
+for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 5; j++) {
+        std::cout << w_map(i, j) << " ";
+    }
+    std::cout << "\n";
+}
+
+// Access bias via Eigen
+auto b_map = layer.bias().as_eigen<float, 4>();
+std::cout << "Bias values: ";
+for (int d = 0; d < 5; d++) {
+    std::cout << b_map(0, 0, 0, d) << " ";
+}
+std::cout << "\n";
+```
+
+---
+
+## Building Neural Networks with Linear Layers
+
+### Simple MLP (Multi-Layer Perceptron)
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+class SimpleNN {
+public:
+    Linear fc1;
+    Linear fc2;
+    Linear fc3;
+    Relu relu;
+    
+    SimpleNN() 
+        : fc1(784, 256, Initializers::he_normal),
+          fc2(256, 128, Initializers::he_normal),
+          fc3(128, 10, Initializers::xavier_normal) {}
+    
+    // Forward pass
+    Tensor operator()(const Tensor& input) const {
+        Tensor h1 = relu(fc1(input));     // (batch, 784) -> (batch, 256) -> ReLU
+        Tensor h2 = relu(fc2(h1));        // (batch, 256) -> (batch, 128) -> ReLU
+        Tensor out = fc3(h2);             // (batch, 128) -> (batch, 10)
+        return out;
+    }
+    
+    // Collect parameters for optimization
+    std::vector<Parameter> parameters() {
+        return {
+            {&fc1.weights(), true},   // Decay enabled
+            {&fc2.weights(), true},
+            {&fc3.weights(), true},
+            {&fc1.bias(), false},     // No decay for bias
+            {&fc2.bias(), false},
+            {&fc3.bias(), false}
+        };
+    }
+};
+```
+
+### Training Loop with Linear Layers
+
+```cpp
+int main() {
+    SimpleNN model;
+    CrossEntropy loss_fn;
+    Adam optimizer(model.parameters(), 0.001f);
+    
+    // Training data
+    Tensor x_train({1000, 784});  // 1000 samples, 784 features
+    Tensor y_train({1000, 10});   // 10 classes
+    
+    int epochs = 10;
+    int batch_size = 32;
+    
+    for (int epoch = 0; epoch < epochs; epoch++) {
+        float epoch_loss = 0.0f;
+        
+        for (int b = 0; b < x_train.shape()[0]; b += batch_size) {
+            // Get batch
+            Tensor batch = x_train[b];
+            Tensor targets = y_train[b];
+            
+            // Forward pass through linear layers
+            Tensor logits = model(batch);
+            
+            // Compute loss
+            Tensor loss = loss_fn(logits, targets);
+            epoch_loss += *static_cast<float*>(loss.data());
+            
+            // Backward pass
+            loss.backward();
+            
+            // Update weights (including linear layer weights/biases)
+            optimizer.update();
+            optimizer.clear_grads();
+        }
+        
+        float avg_loss = epoch_loss / (x_train.shape()[0] / batch_size);
+        std::cout << "Epoch " << epoch << " - Loss: " << avg_loss << "\n";
+    }
+    
+    return 0;
+}
+```
+
+---
+
+## Layer Properties
+
+```cpp
+Linear layer(512, 256);
+
+// Query layer metadata
+std::cout << "Layer configuration:\n";
+std::cout << "  Input size: " << layer.input_size() << "\n";
+std::cout << "  Output size: " << layer.output_size() << "\n";
+std::cout << "  Data type: " << static_cast<int>(layer.dtype()) << "\n";
+std::cout << "  Device: " << static_cast<int>(layer.device()) << "\n";
+
+// Weights storage
+const auto& w = layer.weights();
+std::cout << "  Weights total elements: " << w.size() << "\n";
+std::cout << "  Bias total elements: " << layer.bias().size() << "\n";
+```
+
+
 
 
