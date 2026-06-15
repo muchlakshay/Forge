@@ -565,6 +565,404 @@ const auto& w = layer.weights();
 std::cout << "  Weights total elements: " << w.size() << "\n";
 std::cout << "  Bias total elements: " << layer.bias().size() << "\n";
 ```
+# Activation Functions Documentation
+
+Activation functions are non-linear transformations applied to the output of neural network layers. They introduce non-linearity into the model, enabling it to learn complex patterns. Forge supports 6 commonly-used activation functions.
+
+---
+
+## ReLU (Rectified Linear Unit)
+
+**Mathematical Definition:**
+```
+ReLU(x) = max(0, x)
+```
+
+**Characteristics:**
+- Simplest and most computationally efficient activation
+- Zero gradient for negative inputs (dying ReLU problem)
+- Output range: [0, ∞)
+
+**Use Cases:**
+- Hidden layers in CNNs and MLPs
+- First choice for deep networks
+- Default activation in modern architectures
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    Relu relu;
+    
+    // Forward pass
+    auto x = Tensor::Range(-10, 10, 1, true);  // Values from -10 to 10
+    
+    Tensor activated = relu(x);
+    
+    // ReLU zeros out all negative values
+    // x: [-10, -9, ..., -1, 0, 1, ..., 9]
+    // output: [0, 0, ..., 0, 0, 1, ..., 9]
+    
+    std::cout << "Output after ReLU:\n" << activated << "\n";
+    
+    // Backward pass (automatic via autograd)
+    activated.backward();
+    auto grads = x.grads();  // Gradient of ReLU
+    
+    return 0;
+}
+```
+
+### In a Neural Network
+
+```cpp
+class ReLUNetwork {
+public:
+    Linear fc1, fc2, fc3;
+    Relu relu;
+    
+    ReLUNetwork() 
+        : fc1(784, 256), fc2(256, 128), fc3(128, 10) {}
+    
+    Tensor operator()(const Tensor& input) const {
+        return fc3(relu(fc2(relu(fc1(input)))));
+    }
+};
+```
+
+---
+
+## Sigmoid
+
+**Mathematical Definition:**
+```
+Sigmoid(x) = 1 / (1 + e^(-x))
+```
+
+**Characteristics:**
+- Output range: (0, 1) - perfect for probabilities
+- Smooth gradient everywhere
+- Prone to vanishing gradient problem
+- Computationally more expensive than ReLU
+
+**Use Cases:**
+- Output layer for binary classification
+- Probability outputs
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    Sigmoid sigmoid;
+    
+    // Forward pass
+    auto logits = Tensor::Range(-5, 5, 0.1f, true);
+    
+    Tensor probabilities = sigmoid(logits);
+    // output ∈ (0, 1) - can be interpreted as probability
+    
+    std::cout << "Probabilities:\n" << probabilities << "\n";
+    
+    // Backward pass
+    probabilities.backward();
+    auto grads = logits.grads();
+    
+    return 0;
+}
+```
+
+### Binary Classification Example
+
+```cpp
+class BinaryClassifier {
+public:
+    Linear fc1, fc2;
+    Relu relu;
+    Sigmoid sigmoid;
+    
+    BinaryClassifier() 
+        : fc1(784, 128), fc2(128, 1) {}
+    
+    Tensor operator()(const Tensor& input) const {
+        return sigmoid(fc2(relu(fc1(input))));  // Output: probability [0, 1]
+    }
+};
+
+int main() {
+    BinaryClassifier model;
+    BinaryCrossEntropy loss_fn;
+    
+    Tensor x({64, 784});
+    Tensor y_true({64, 1});  // Binary labels: 0 or 1
+    
+    Tensor predictions = model(x);  // Shape: (64, 1), values ∈ [0, 1]
+    Tensor loss = loss_fn(predictions, y_true);
+    
+    loss.backward();
+    // Update weights...
+    
+    return 0;
+}
+```
+
+---
+
+## Tanh (Hyperbolic Tangent)
+
+**Mathematical Definition:**
+```
+Tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+```
+
+**Characteristics:**
+- Output range: (-1, 1) - centered at 0
+- Stronger gradient than Sigmoid
+- Still suffers from vanishing gradient
+
+**Use Cases:**
+- When centered output is beneficial
+- Alternative to Sigmoid
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    Tanh tanh;
+    
+    // Forward pass
+    auto x = Tensor::Range(-3, 3, 0.05f, true);
+    
+    Tensor activated = tanh(x);
+    // output ∈ (-1, 1)
+    
+    std::cout << "Tanh output range: (-1, 1)\n";
+    std::cout << "Sample outputs:\n" << activated << "\n";
+    
+    // Backward pass
+    activated.backward();
+    
+    return 0;
+}
+```
+
+---
+
+## GELU (Gaussian Error Linear Unit, tanh approximation)
+
+**Mathematical Definition:**
+```
+GELU(x) = 0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))
+```
+
+**Characteristics:**
+- Smooth, differentiable activation
+- Output range: approximately (-0.17, inf) for typical inputs
+- State-of-the-art in transformer models
+- More computationally expensive than ReLU but better performance
+
+**Use Cases:**
+- Transformer models (BERT, GPT)
+- Modern NLP architectures
+- When maximum accuracy is prioritized over speed
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    Gelu gelu;
+    
+    // Forward pass
+    Tensor x({32, 768});  // Typical transformer hidden size
+
+    Tensor activated = gelu(x);
+    
+    std::cout << "GELU output:\n" << activated << "\n";
+    
+    // Backward pass
+    activated.backward();
+    
+    return 0;
+}
+```
+
+### Transformer Architecture
+
+```cpp
+class TransformerBlock {
+public:
+    Linear fc1, fc2;
+    Gelu gelu;
+    
+    // Feed-forward network with GELU
+    Tensor forward(const Tensor& x) const {
+        Tensor hidden = gelu(fc1(x));  // Expand to 4x hidden dim
+        return fc2(hidden);             // Project back
+    }
+};
+```
+
+---
+
+## Softmax
+
+**Mathematical Definition:**
+```
+Softmax(x_i) = e^(x_i) / Σ(e^(x_j))
+```
+
+**Characteristics:**
+- Converts logits to probability distribution
+- Output sums to 1.0
+- Used exclusively at output layer
+- Numerically stable implementations required
+
+**Use Cases:**
+- Multi-class classification output layer
+- Attention weights normalization
+- Probability distributions
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    Softmax softmax;
+    
+    // Forward pass
+    Tensor logits({32, 10});  // 10 classes
+    
+    Tensor probabilities = softmax(logits);
+    // Each row sums to 1.0 and represents class probabilities
+    
+    std::cout << "Class probabilities:\n" << probabilities << "\n";
+    
+    // Verify probabilities sum to 1
+    auto prob_map = probabilities.as_eigen<float, 2>();
+    float row_sum = 0.0f;
+    for (int j = 0; j < 10; j++) {
+        row_sum += prob_map(0, j);
+    }
+    std::cout << "First row sum: " << row_sum << " (should be ≈ 1.0)\n";
+    
+    return 0;
+}
+```
+
+### Multi-Class Classification
+
+```cpp
+class MultiClassifier {
+public:
+    Linear fc1, fc2, fc3;
+    Relu relu;
+    Softmax softmax;
+    
+    MultiClassifier() 
+        : fc1(784, 256), fc2(256, 128), fc3(128, 10) {}
+    
+    Tensor operator()(const Tensor& input) const {
+        Tensor hidden1 = relu(fc1(input));
+        Tensor hidden2 = relu(fc2(hidden1));
+        Tensor logits = fc3(hidden2);
+        return softmax(logits);  // Convert to probabilities
+    }
+};
+
+int main() {
+    MultiClassifier model;
+    CrossEntropy loss_fn;  // Often fused with softmax
+    
+    Tensor x({64, 784});
+    Tensor y_true({64, 10});  // One-hot encoded labels
+    
+    Tensor predictions = model(x);  // Probabilities, shape: (64, 10)
+    Tensor loss = loss_fn(predictions, y_true);
+    
+    loss.backward();
+    
+    return 0;
+}
+```
+
+---
+
+## Leaky ReLU
+
+**Mathematical Definition:**
+```
+LeakyReLU(x) = max(a*x, x)  where α is typically 0.01
+```
+
+**Characteristics:**
+- Allows small gradient for negative inputs (fixes dying ReLU)
+- Smoother gradients than ReLU
+- Minimal computational overhead vs ReLU
+- Rarely dramatically better than ReLU, but safer
+
+**Use Cases:**
+- Alternative when ReLU neurons die
+- When gradient flow in negative region is desired
+
+### Usage Example
+
+```cpp
+#include "Forge.h"
+using namespace Forge;
+
+int main() {
+    LeakyRelu leaky_relu;  // Default α = 0.01
+    
+    // Forward pass
+    Tensor x({32, 64});
+    
+    Tensor activated = leaky_relu(x);
+    // Negative values are scaled by α instead of being zeroed
+    
+    std::cout << "Leaky ReLU output:\n" << activated << "\n";
+    
+    // Backward pass
+    activated.backward();
+    
+    return 0;
+}
+```
+
+### GAN Generator Example
+
+```cpp
+class GANGenerator {
+public:
+    Linear fc1, fc2, fc3, fc4;
+    LeakyRelu leaky_relu;
+    
+    GANGenerator() 
+        : fc1(100, 256), fc2(256, 512), fc3(512, 1024), fc4(1024, 784) {}
+    
+    Tensor operator()(const Tensor& noise) const {
+        Tensor h1 = leaky_relu(fc1(noise));
+        Tensor h2 = leaky_relu(fc2(h1));
+        Tensor h3 = leaky_relu(fc3(h2));
+        Tensor output = fc4(h3);  // Raw image data
+        return output;
+    }
+};
+```
+
+---
 
 
 
