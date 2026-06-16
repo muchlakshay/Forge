@@ -941,29 +941,66 @@ int main() {
 }
 ```
 
-### GAN Generator Example
+---
+
+
+# Loss Functions Documentation
+
+Loss functions quantify the difference between predictions and ground truth.
+
+## Mean Squared Error (MSE)
 
 ```cpp
-class GANGenerator {
-public:
-    Linear fc1, fc2, fc3, fc4;
-    LeakyRelu leaky_relu;
-    
-    GANGenerator() 
-        : fc1(100, 256), fc2(256, 512), fc3(512, 1024), fc4(1024, 784) {}
-    
-    Tensor operator()(const Tensor& noise) const {
-        Tensor h1 = leaky_relu(fc1(noise));
-        Tensor h2 = leaky_relu(fc2(h1));
-        Tensor h3 = leaky_relu(fc3(h2));
-        Tensor output = fc4(h3);  // Raw image data
-        return output;
-    }
-};
+MSE mse;
+Tensor loss = mse(predictions, targets);
+```
+
+**Definition:** `L = (1/N) * Σ(predictions_i - targets_i)²`
+
+**Use Cases:** Regression, reconstruction tasks
+
+**API:**
+```cpp
+Tensor operator()(const Tensor& predictions, const Tensor& targets);
 ```
 
 ---
 
+## Cross-Entropy Loss
 
+```cpp
+CrossEntropy ce;
+Tensor loss = ce(logits, targets);  // targets: one-hot encoded
+```
 
+**Definition:** `L = -(1/N) * Σ targets_i * log(softmax(logits_i))`
+
+**Use Cases:** Multi-class classification
+
+**Note:** Softmax is fused internally for numerical stability. Pass logits, not probabilities.
+
+**API:**
+```cpp
+Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
+```
+
+---
+
+## Binary Cross-Entropy (BCE)
+
+```cpp
+BinaryCrossEntropy bce;
+Tensor loss = bce(logits, targets);  // targets: 0 or 1
+```
+
+**Definition:** `L = -(1/N) * Σ [targets_i * log(sigmoid(logits_i)) + (1 - targets_i) * log(1 - sigmoid(logits_i))]`
+
+**Use Cases:** Binary classification, multi-label classification
+
+**Note:** Sigmoid is fused internally for numerical stability. Pass logits, not probabilities.
+
+**API:**
+```cpp
+Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
+```
 
