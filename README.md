@@ -1003,4 +1003,159 @@ Tensor loss = bce(logits, targets);  // targets: 0 or 1
 ```cpp
 Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
 ```
+# Optimizers
+
+This module provides the public-facing optimizers used to train models. Each optimizer owns the parameters it was constructed with, along with any internal state (momentum/moment buffers), and updates those parameters in place each time `update()` is called. Internally, `update()` dispatches to a device-specific backend (currently only CPU supported).
+
+Two optimizers are currently available:
+
+- **`Forge::SGD`** - stochastic gradient descent, with optional momentum
+- **`Forge::Adam`** - adaptive moment estimation, with optional weight decay
+
+---
+
+## 1. `Forge::SGD`
+
+### Constructor
+
+```cpp
+explicit SGD(std::vector<Parameter> parameters, float lr = 0.01f, float momentum_coef = 0.0f);
+```
+
+| Argument | Meaning |
+|---|---|
+| `parameters` | The parameters this optimizer will update. Must all share the same device and dtype; duplicates are silently removed. |
+| `lr` | Learning rate (step size). Default `0.01`. |
+| `momentum_coef` | Momentum coefficient, must be in `[0, 1]`. `0.0` (default) = plain SGD. `> 0.0` = momentum SGD. |
+
+If `momentum_coef > 0`, a zero-initialized velocity buffer is allocated internally for each parameter - no manual buffer setup needed.
+
+### Methods
+
+| Method | Meaning |
+|---|---|
+| `update()` | Applies one optimization step to all owned parameters, using their currently accumulated gradients. |
+| `clear_grads()` | Zeroes the gradients of all owned parameters. Call after `update()`, before the next backward pass. |
+| `setLearningRate(lr)` | Updates the learning rate. |
+| `setMomentumCoef(momentum_coef)` | Updates the momentum coefficient (must be in `[0, 1]`). |
+| `parameters()` | Read-only access to the owned parameters. |
+| `learningRate()` | Returns the current learning rate. |
+| `momentumCoef()` | Returns the current momentum coefficient. |
+
+### Update rule
+
+For each parameter `p` with gradient `g`:
+
+- **Without momentum** (`momentum_coef == 0`):
+
+  ```
+  p = p - lr * g
+  ```
+
+- **With momentum** (`momentum_coef > 0`), using internal velocity buffer `V`:
+
+  ```
+  V = momentum_coef * V + g
+  p = p - lr * V
+  ```
+
+  `V` accumulates an exponentially-weighted sum of past gradients, smoothing the descent direction and accelerating convergence along consistent gradient directions.
+
+### Example
+
+```cpp
+Forge::SGD optimizer(model.parameters(), /*lr=*/0.01f, /*momentum_coef=*/0.9f);
+Forge::MSE loss_fn;
+
+for (auto& batch : batches) {
+    optimizer.clear_grads();
+    pred = model(batch)
+    auto loss = loss_fn(ground_truth, pred);
+    loss.backward();
+    optimizer.update();
+}
+```
+
+---
+
+## 2. `Forge::Adam`
+
+### Constructor
+
+```cpp
+explicit Adam(const std::vector<Parameter>& parameters, float lr = 0.01f, float beta_1 = 0.9f,
+    float beta_2 = 0.999f, float decay_factor = 0.01f);
+```
+
+| Argument | Meaning |
+|---|---|
+| `parameters` | The parameters this optimizer will update. Must all share the same device and dtype; duplicates are silently removed. |
+| `lr` | Learning rate. Default `0.01`. |
+| `beta_1` | Exponential decay rate for the first moment estimate, must be in `[0, 1]`. Default `0.9`. |
+| `beta_2` | Exponential decay rate for the second moment estimate, must be in `[0, 1]`. Default `0.999`. |
+| `decay_factor` | Weight-decay coefficient, applied only to parameters whose `need_decay` flag is set. Default `0.01`. |
+
+Zero-initialized first- and second-moment buffers are allocated internally for each parameter. The step counter used for bias correction (`epoch`) is managed internally, starting at `1` and incrementing automatically on every `update()` call - no need to track it yourself.
+
+### Methods
+
+| Method | Meaning |
+|---|---|
+| `update()` | Applies one Adam step to all owned parameters, then advances the internal step counter. |
+| `clear_grads()` | Zeroes the gradients of all owned parameters. Call after `update()`, before the next backward pass. |
+| `reset()` | Resets the internal step counter back to `1` (e.g. when restarting training). Does not reset the moment buffers. |
+| `setLearningRate(lr)` | Updates the learning rate. |
+| `setBeta_1(beta_1)` | Updates beta_1 (must be in `[0, 1]`). |
+| `setBeta_2(beta_2)` | Updates beta_2 (must be in `[0, 1]`). |
+| `setDecayFactor(decay_rate)` | Updates the weight-decay coefficient (must be in `[0, 1]`). |
+| `parameters()` | Read-only access to the owned parameters. |
+| `firstMoment()` | Read-only access to the internal first-moment buffers (`M`). |
+| `secondMoment()` | Read-only access to the internal second-moment buffers (`V`). |
+| `beta_1()` / `beta_2()` | Current beta values. |
+| `learningRate()` | Current learning rate. |
+| `epoch()` | Current internal step counter. |
+| `decayFactor()` | Current weight-decay coefficient. |
+
+### Update rule
+
+For each parameter `p` with gradient `g`, at step `t = epoch`:
+
+```
+M = beta_1 * M + (1 - beta_1) * g           # first moment
+V = beta_2 * V + (1 - beta_2) * g^2          # second moment
+
+M_hat = M / (1 - beta_1^t)                  # bias-corrected first moment
+V_hat = V / (1 - beta_2^t)                  # bias-corrected second moment
+
+p = p - lr * M_hat / (sqrt(V_hat) + e)       # e = 1e-8, fixed internally
+
+if need_decay:
+    p = p - lr * decay_factor * p           # weight decay, applied after the Adam step
+```
+
+### Example
+
+```cpp
+Forge::Adam optimizer(model.parameters(), /*lr=*/0.001f, /*beta_1=*/0.9f,
+    /*beta_2=*/0.999f, /*decay_factor=*/0.01f);
+Forge::MSE loss_fn;
+
+for (auto& batch : dataloader) {
+    optimizer.clear_grads();
+    pred = model(batch)
+    auto loss = loss_fn(ground_truth, pred);
+    loss.backward();
+    optimizer.update();
+}
+```
+
+---
+
+## Notes & gotchas
+
+- **Construction validates inputs.** Constructing either optimizer with an empty parameter list, or with parameters spread across mixed devices/dtypes, throws `std::invalid_argument`. Duplicate parameters are detected and removed automatically, no need to de-duplicate yourself.
+- **`momentum_coef`, `beta_1`, `beta_2`, and `decay_factor` are all range-checked** to `[0, 1]`, both at construction and whenever set via their setters.
+- **Per-parameter weight decay:** decay is opt-in via each `Parameter`'s `need_decay` flag, not a global switch - set this when building your model if you want decay to skip certain parameters (e.g. biases/LayerNorm scales).
+- **`Adam::epoch()` is managed for you** - it starts at `1` and increments on every `update()` call. Use `reset()` if you need to restart bias correction from scratch (e.g. after loading a fresh set of parameters into an existing optimizer).
+- **`clear_grads()` is separate from `update()`** - remember to call it once per step (typically right before `loss.backward()`), or gradients will keep accumulating across steps.
 
