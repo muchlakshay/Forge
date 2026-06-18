@@ -1159,3 +1159,87 @@ for (auto& batch : dataloader) {
 - **`Adam::epoch()` is managed for you** - it starts at `1` and increments on every `update()` call. Use `reset()` if you need to restart bias correction from scratch (e.g. after loading a fresh set of parameters into an existing optimizer).
 - **`clear_grads()` is separate from `update()`** - remember to call it once per step (typically right before `loss.backward()`), or gradients will keep accumulating across steps.
 
+  # LayerNorm
+
+`Forge::LayerNorm` implements layer normalization over the last dimension of a 3D input tensor (`batch, seq_len, d_model`), with learnable per-feature scale (`gamma`) and shift (`beta`) parameters. Like the optimizers, the actual math runs through a device-specific backend (CPU, GPU, ...) resolved internally - callers just construct a `LayerNorm` and call it like a function.
+
+---
+
+## `Forge::LayerNorm`
+
+### Constructor
+
+```cpp
+LayerNorm(std::size_t d_model, Dtype dtype, const Device& device, bool need_grads = true);
+```
+
+| Argument | Meaning |
+|---|---|
+| `d_model` | Size of the last dimension to normalize over (the feature dimension). |
+| `dtype` | Data type for `gamma`, `beta`, and the computation. |
+| `device` | Device the parameters live on (e.g. CPU, GPU). |
+| `need_grads` | Whether `gamma`/`beta` are trainable (accumulate gradients). Default `true`. |
+
+On construction, `gamma` is initialized to ones and `beta` to zeros, both with shape `[d_model]`.
+
+### Call operator
+
+```cpp
+Tensor operator()(const Tensor& input);
+```
+
+Applies layer normalization to `input` and returns a new tensor of the same shape.
+
+- `input` must be a 3D tensor shaped `(batch, seq_len, d_model)`, where the last dimension matches the `d_model` this `LayerNorm` was constructed with - otherwise it throws `std::invalid_argument`.
+- `input` must reside on the same device as the `LayerNorm` instance - otherwise it throws `std::invalid_argument`.
+- If `input`, `gamma`, or `beta` require gradients, the necessary autograd node is attached automatically - no manual backward wiring needed.
+
+### Accessors
+
+| Method | Meaning |
+|---|---|
+| `gamma()` | Mutable reference to the learnable scale parameter, shape `[d_model]`. |
+| `beta()` | Mutable reference to the learnable shift parameter, shape `[d_model]`. |
+| `d_model()` | Returns the configured feature dimension size. |
+| `d_device()` | Returns the device this `LayerNorm` operates on. |
+| `dtype()` | Returns the configured data type. |
+
+### Computation
+
+For each row `x` along the last dimension (i.e. each `(batch, seq_len)` position, a vector of length `d_model`):
+
+```
+mean = mean(x)                          # average over d_model
+var  = mean((x - mean)^2)               # variance over d_model
+
+x_norm = (x - mean) / sqrt(var + eps)   # eps = 1e-5, fixed internally
+
+y = gamma * x_norm + beta               # gamma, beta broadcast over (batch, seq_len)
+```
+
+`gamma` and `beta` are applied element-wise per feature (broadcast across `batch` and `seq_len`), so every position in the sequence is rescaled/shifted the same way along the feature axis.
+
+### Example
+
+```cpp
+Forge::LayerNorm ln(/*d_model=*/512, Dtype::Float32, Device::CPU);
+
+Tensor x = ...; // shape (batch, seq_len, 512)
+Tensor y = ln(x); // normalized output, same shape (batch, seq_len, 512)
+
+y.backward(); // gradients flow back into x, ln.gamma(), and ln.beta() automatically
+
+// gamma/beta are ordinary learnable parameters - hand them to an optimizer like any other:
+Forge::Adam optimizer({Parameter{&ln.gamma()}, Parameter{&ln.beta()}}, /*lr=*/0.001f);
+```
+
+---
+
+## Notes & gotchas
+
+- **Input must be 3D.** `LayerNorm` expects `(batch, seq_len, d_model)` - reshape lower- or higher-rank tensors to this layout before calling it.
+- **Normalization is over the last axis only.** Each `(batch, seq_len)` row is normalized independently across its `d_model` features; there is no cross-sequence or cross-batch normalization.
+- **`eps` is fixed at `1e-5`** and is not currently configurable from the constructor.
+- **`need_grads` only controls `gamma`/`beta`.** Even if you pass `need_grads = false`, the output tensor will still require gradients if the `input` you call it with requires gradients - gradient tracking is `need_grads OR input.need_grads()`.
+- **Device/shape mismatches throw immediately** (`std::invalid_argument`) rather than silently broadcasting or casting - construct one `LayerNorm` per device/`d_model` combination you need.
+
