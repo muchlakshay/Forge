@@ -1243,3 +1243,134 @@ Forge::Adam optimizer({Parameter{&ln.gamma()}, Parameter{&ln.beta()}}, /*lr=*/0.
 - **`need_grads` only controls `gamma`/`beta`.** Even if you pass `need_grads = false`, the output tensor will still require gradients if the `input` you call it with requires gradients - gradient tracking is `need_grads OR input.need_grads()`.
 - **Device/shape mismatches throw immediately** (`std::invalid_argument`) rather than silently broadcasting or casting - construct one `LayerNorm` per device/`d_model` combination you need.
 
+# Self Attention
+
+`Forge::SelfAttention` implements multi-head scaled dot-product self-attention with an optional causal mask, followed by a linear output projection. As with the other modules, the actual math runs through a device-specific backend resolved internally - you only ever interact with the `SelfAttention` object itself.
+
+---
+
+## `Forge::SelfAttention`
+
+### Constructor
+
+```cpp
+SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads, bool mask,
+    Device device, Dtype dtype = Dtype::float32, Initializers initializer = Initializers::he_normal);
+```
+
+| Argument | Meaning |
+|---|---|
+| `d_model` | Input/output feature dimension. |
+| `Q_K_dims` | Dimension of the query/key projection, per head. |
+| `V_dims` | Dimension of the value projection, per head. |
+| `heads` | Number of attention heads. |
+| `mask` | Whether this instance uses causal masking. If `true`, you must call `createMask(seq_len)` before the first forward pass. |
+| `device` | Device the weights live on. |
+| `dtype` | Data type for weights and computation. Default `float32`. |
+| `initializer` | Initialization scheme used for the query/key/value projection weights. Default `he_normal`. |
+
+On construction, the query/key projection weights are allocated with shape `(heads, d_model, Q_K_dims)`, the value projection weights with shape `(heads, d_model, V_dims)`, and all three are initialized using `initializer`. An internal `Linear` layer (no bias) projects the concatenated multi-head output, `heads * V_dims`, back down to `d_model`.
+
+### Call operator
+
+```cpp
+Tensor operator()(const Tensor& input) const;
+```
+
+Runs the forward pass and returns a tensor of shape `(batch, seq_len, d_model)`.
+
+- `input` is expected as `(batch, seq_len, d_model)` (rank > 3 throws `std::invalid_argument`).
+- If this instance was constructed with `mask = true`, you must have called `createMask(seq_len)` first - otherwise it throws `std::runtime_error`. The mask's size must also match the input's sequence length, or it throws `std::invalid_argument`.
+- Gradients are wired up automatically for `input` and the query/key/value weights whenever any of them require gradients - no manual backward bookkeeping needed.
+
+### `createMask`
+
+```cpp
+void createMask(std::size_t seq_len);
+```
+
+Builds a `(seq_len, seq_len)` causal mask and stores it internally. Only valid for instances constructed with `mask = true` (otherwise throws `std::runtime_error`). Call this once before the first forward pass, and again whenever `seq_len` changes.
+
+### Accessors
+
+| Method | Meaning |
+|---|---|
+| `query()` | Read-only access to the query projection weights, shape `(heads, d_model, Q_K_dims)`. |
+| `key()` | Read-only access to the key projection weights, shape `(heads, d_model, Q_K_dims)`. |
+| `value()` | Read-only access to the value projection weights, shape `(heads, d_model, V_dims)`. |
+| `linear()` | Mutable access to the internal output-projection `Linear` layer (its own weights are also learnable - see the `Linear` module's docs). |
+| `mask()` | Read-only access to the stored causal mask tensor. |
+| `using_mask()` / `useMask()` | Whether this instance was constructed with masking enabled (both return the same flag). |
+| `heads()` | Number of attention heads. |
+| `d_model()` | Configured model dimension. |
+| `device()` | Device the weights live on. |
+| `dtype()` | Configured data type. |
+| `dispatch_key()` | Internal device-routing key - not generally needed by callers. |
+
+### Computation
+
+Shapes: `input` is `(batch, seq_len, d_model)`; `query_W`/`key_W` are `(heads, d_model, Q_K_dims)`; `value_W` is `(heads, d_model, V_dims)`. `@` denotes matrix multiplication, batched over `batch` and `heads`.
+
+For each head `h`:
+
+```
+Q = input @ query_W[h]                  # (batch, seq_len, Q_K_dims)
+K = input @ key_W[h]                    # (batch, seq_len, Q_K_dims)
+V = input @ value_W[h]                  # (batch, seq_len, V_dims)
+
+scores = (Q @ K^T) / sqrt(Q_K_dims)     # (batch, seq_len, seq_len)
+
+if using_mask:
+    scores = scores + mask              # mask has -10000 at future positions (j > i)
+
+attn = softmax(scores, axis=-1)         # (batch, seq_len, seq_len)
+head_out = attn @ V                     # (batch, seq_len, V_dims)
+```
+
+The per-head outputs are concatenated along the last axis and projected back to `d_model`:
+
+```
+concat = concat_heads(head_out)         # (batch, seq_len, heads * V_dims)
+output = concat @ W_out^T               # (batch, seq_len, d_model), W_out = linear() weights, no bias
+```
+
+### Example
+
+```cpp
+// Encoder-style self-attention, no mask
+Forge::SelfAttention attn(/*d_model=*/512, /*Q_K_dims=*/64, /*V_dims=*/64, /*heads=*/8,
+    /*mask=*/false, Device::CPU);
+
+Tensor x = ...; // shape (batch, seq_len, 512)
+Tensor y = attn(x); // shape (batch, seq_len, 512)
+y.backward();
+```
+
+```cpp
+// Decoder-style self-attention, causal mask
+Forge::SelfAttention attn(/*d_model=*/512, /*Q_K_dims=*/64, /*V_dims=*/64, /*heads=*/8,
+    /*mask=*/true, Device::CPU);
+
+attn.createMask(seq_len); // required before the first forward pass
+
+Tensor y = attn(x);
+y.backward();
+
+// query/key/value projection weights, plus the internal Linear's own weights,
+// are all ordinary learnable parameters - register them with your optimizer
+Forge::Adam optimizer({
+    Parameter{&attn.query()}, Parameter{&attn.key()}, Parameter{&attn.value()}
+    // + the Linear layer's own parameters, see its docs
+}, /*lr=*/0.0001f);
+```
+
+---
+
+## Notes & gotchas
+
+- **`createMask` must be called before forward when `mask = true`.** Forgetting it throws `std::runtime_error("create a mask prior to forward pass")`.
+- **The mask is fixed at the sequence length you build it for.** If your sequence length changes between batches, call `createMask(new_seq_len)` again.
+- **Heads up:** the input-vs-mask length check in `operator()` compares `input.shape()[0]` against the mask's sequence length. For a `(batch, seq_len, d_model)` input, `shape()[0]` is the batch size, not `seq_len` - it looks like it should be comparing against `shape()[1]` instead. As written, this check only behaves correctly when `batch_size == seq_len`, so don't rely on it to catch a real mismatch.
+- **The output projection has no bias** - `linear()` is constructed with bias disabled.
+- **Weight initialization applies only to Q/K/V.** The internal `Linear` layer initializes itself independently (see the `Linear` module's own docs for its default scheme).
+
