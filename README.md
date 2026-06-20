@@ -565,381 +565,192 @@ const auto& w = layer.weights();
 std::cout << "  Weights total elements: " << w.size() << "\n";
 std::cout << "  Bias total elements: " << layer.bias().size() << "\n";
 ```
-# Activation Functions Documentation
+# Activations
 
-Activation functions are non-linear transformations applied to the output of neural network layers. They introduce non-linearity into the model, enabling it to learn complex patterns. Forge supports 6 commonly-used activation functions.
+This module provides the activation functions used inside models. Each one is a small stateless functor - construct it (or use a temporary) and call it like a function on a `Tensor`. Gradients are wired up automatically whenever the input requires them, so you never call a grads function directly; it runs as part of the normal `.backward()` pass.
 
 ---
 
-## ReLU (Rectified Linear Unit)
-
-**Mathematical Definition:**
-```
-ReLU(x) = max(0, x)
-```
-
-**Characteristics:**
-- Simplest and most computationally efficient activation
-- Zero gradient for negative inputs (dying ReLU problem)
-- Output range: [0, ∞)
-
-**Use Cases:**
-- Hidden layers in CNNs and MLPs
-- First choice for deep networks
-- Default activation in modern architectures
-
-### Usage Example
+## `Forge::Relu`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
-
-int main() {
-    Relu relu;
-    
-    // Forward pass
-    auto x = Tensor::Range(-10, 10, 1, true);  // Values from -10 to 10
-    
-    Tensor activated = relu(x);
-    
-    // ReLU zeros out all negative values
-    // x: [-10, -9, ..., -1, 0, 1, ..., 9]
-    // output: [0, 0, ..., 0, 0, 1, ..., 9]
-    
-    std::cout << "Output after ReLU:\n" << activated << "\n";
-    
-    // Backward pass (automatic via autograd)
-    activated.backward();
-    auto grads = x.grads();  // Gradient of ReLU
-    
-    return 0;
-}
+Tensor operator()(const Tensor& input) const;
 ```
 
-### In a Neural Network
+Returns a new tensor of the same shape as `input`, with ReLU applied element-wise.
+
+### Formula
+
+```
+Relu(x) = max(x, 0)
+```
+
+### Example
 
 ```cpp
-class ReLUNetwork {
-public:
-    Linear fc1, fc2, fc3;
-    Relu relu;
-    
-    ReLUNetwork() 
-        : fc1(784, 256), fc2(256, 128), fc3(128, 10) {}
-    
-    Tensor operator()(const Tensor& input) const {
-        return fc3(relu(fc2(relu(fc1(input)))));
-    }
-};
+Forge::Relu relu;
+
+Tensor x = ...;     // any shape
+Tensor y = relu(x); // same shape as x
+y.backward();
 ```
 
 ---
 
-## Sigmoid
-
-**Mathematical Definition:**
-```
-Sigmoid(x) = 1 / (1 + e^(-x))
-```
-
-**Characteristics:**
-- Output range: (0, 1) - perfect for probabilities
-- Smooth gradient everywhere
-- Prone to vanishing gradient problem
-- Computationally more expensive than ReLU
-
-**Use Cases:**
-- Output layer for binary classification
-- Probability outputs
-
-### Usage Example
+## `Forge::Sigmoid`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
-
-int main() {
-    Sigmoid sigmoid;
-    
-    // Forward pass
-    auto logits = Tensor::Range(-5, 5, 0.1f, true);
-    
-    Tensor probabilities = sigmoid(logits);
-    // output ∈ (0, 1) - can be interpreted as probability
-    
-    std::cout << "Probabilities:\n" << probabilities << "\n";
-    
-    // Backward pass
-    probabilities.backward();
-    auto grads = logits.grads();
-    
-    return 0;
-}
+Tensor operator()(const Tensor& input) const;
 ```
 
-### Binary Classification Example
+Returns a new tensor of the same shape as `input`, with the sigmoid (logistic) function applied element-wise.
+
+### Formula
+
+```
+Sigmoid(x) = 1 / (1 + exp(-x))
+```
+
+### Example
 
 ```cpp
-class BinaryClassifier {
-public:
-    Linear fc1, fc2;
-    Relu relu;
-    Sigmoid sigmoid;
-    
-    BinaryClassifier() 
-        : fc1(784, 128), fc2(128, 1) {}
-    
-    Tensor operator()(const Tensor& input) const {
-        return sigmoid(fc2(relu(fc1(input))));  // Output: probability [0, 1]
-    }
-};
+Forge::Sigmoid sigmoid;
 
-int main() {
-    BinaryClassifier model;
-    BinaryCrossEntropy loss_fn;
-    
-    Tensor x({64, 784});
-    Tensor y_true({64, 1});  // Binary labels: 0 or 1
-    
-    Tensor predictions = model(x);  // Shape: (64, 1), values ∈ [0, 1]
-    Tensor loss = loss_fn(predictions, y_true);
-    
-    loss.backward();
-    // Update weights...
-    
-    return 0;
-}
+Tensor x = ...;        // any shape
+Tensor y = sigmoid(x); // same shape as x, values in (0, 1)
+y.backward();
 ```
 
 ---
 
-## Tanh (Hyperbolic Tangent)
-
-**Mathematical Definition:**
-```
-Tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
-```
-
-**Characteristics:**
-- Output range: (-1, 1) - centered at 0
-- Stronger gradient than Sigmoid
-- Still suffers from vanishing gradient
-
-**Use Cases:**
-- When centered output is beneficial
-- Alternative to Sigmoid
-
-### Usage Example
+## `Forge::Tanh`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
+Tensor operator()(const Tensor& input) const;
+```
 
-int main() {
-    Tanh tanh;
-    
-    // Forward pass
-    auto x = Tensor::Range(-3, 3, 0.05f, true);
-    
-    Tensor activated = tanh(x);
-    // output ∈ (-1, 1)
-    
-    std::cout << "Tanh output range: (-1, 1)\n";
-    std::cout << "Sample outputs:\n" << activated << "\n";
-    
-    // Backward pass
-    activated.backward();
-    
-    return 0;
-}
+Returns a new tensor of the same shape as `input`, with the hyperbolic tangent applied element-wise.
+
+### Formula
+
+```
+Tanh(x) = tanh(x)
+```
+
+### Example
+
+```cpp
+Forge::Tanh tanh_;
+
+Tensor x = ...;      // any shape
+Tensor y = tanh_(x); // same shape as x, values in (-1, 1)
+y.backward();
 ```
 
 ---
 
-## GELU (Gaussian Error Linear Unit, tanh approximation)
-
-**Mathematical Definition:**
-```
-GELU(x) = 0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3)))
-```
-
-**Characteristics:**
-- Smooth, differentiable activation
-- Output range: approximately (-0.17, inf) for typical inputs
-- State-of-the-art in transformer models
-- More computationally expensive than ReLU but better performance
-
-**Use Cases:**
-- Transformer models (BERT, GPT)
-- Modern NLP architectures
-- When maximum accuracy is prioritized over speed
-
-### Usage Example
+## `Forge::LeakyRelu`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
-
-int main() {
-    Gelu gelu;
-    
-    // Forward pass
-    Tensor x({32, 768});  // Typical transformer hidden size
-
-    Tensor activated = gelu(x);
-    
-    std::cout << "GELU output:\n" << activated << "\n";
-    
-    // Backward pass
-    activated.backward();
-    
-    return 0;
-}
+Tensor operator()(const Tensor& input) const;
 ```
 
-### Transformer Architecture
+Returns a new tensor of the same shape as `input`, with Leaky ReLU applied element-wise.
+
+### Formula
+
+```
+LeakyRelu(x) = x        if x > 0
+             = a * x    otherwise        # a = 0.01, fixed internally
+```
+
+### Example
 
 ```cpp
-class TransformerBlock {
-public:
-    Linear fc1, fc2;
-    Gelu gelu;
-    
-    // Feed-forward network with GELU
-    Tensor forward(const Tensor& x) const {
-        Tensor hidden = gelu(fc1(x));  // Expand to 4x hidden dim
-        return fc2(hidden);             // Project back
-    }
-};
+Forge::LeakyRelu leaky_relu;
+
+Tensor x = ...;            // any shape
+Tensor y = leaky_relu(x);  // same shape as x
+y.backward();
 ```
+
+### Note
+
+The negative slope `a` is hardcoded at `0.01` - there's currently no constructor parameter to change it.
 
 ---
 
-## Softmax
-
-**Mathematical Definition:**
-```
-Softmax(x_i) = e^(x_i) / Σ(e^(x_j))
-```
-
-**Characteristics:**
-- Converts logits to probability distribution
-- Output sums to 1.0
-- Used exclusively at output layer
-- Numerically stable implementations required
-
-**Use Cases:**
-- Multi-class classification output layer
-- Attention weights normalization
-- Probability distributions
-
-### Usage Example
+## `Forge::Gelu`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
-
-int main() {
-    Softmax softmax;
-    
-    // Forward pass
-    Tensor logits({32, 10});  // 10 classes
-    
-    Tensor probabilities = softmax(logits);
-    // Each row sums to 1.0 and represents class probabilities
-    
-    std::cout << "Class probabilities:\n" << probabilities << "\n";
-    
-    // Verify probabilities sum to 1
-    auto prob_map = probabilities.as_eigen<float, 2>();
-    float row_sum = 0.0f;
-    for (int j = 0; j < 10; j++) {
-        row_sum += prob_map(0, j);
-    }
-    std::cout << "First row sum: " << row_sum << " (should be ≈ 1.0)\n";
-    
-    return 0;
-}
+Tensor operator()(const Tensor& input) const;
 ```
 
-### Multi-Class Classification
+Returns a new tensor of the same shape as `input`, with GELU applied element-wise, using the tanh-based approximation (the same one used in GPT-style implementations).
+
+### Formula
+
+```
+Gelu(x) = 0.5 * x * (1 + tanh(k * (x + c * x^3)))
+
+  k = sqrt(2 / pi) = 0.7978845608028654
+  c = 0.044715
+```
+
+### Example
 
 ```cpp
-class MultiClassifier {
-public:
-    Linear fc1, fc2, fc3;
-    Relu relu;
-    Softmax softmax;
-    
-    MultiClassifier() 
-        : fc1(784, 256), fc2(256, 128), fc3(128, 10) {}
-    
-    Tensor operator()(const Tensor& input) const {
-        Tensor hidden1 = relu(fc1(input));
-        Tensor hidden2 = relu(fc2(hidden1));
-        Tensor logits = fc3(hidden2);
-        return softmax(logits);  // Convert to probabilities
-    }
-};
+Forge::Gelu gelu;
 
-int main() {
-    MultiClassifier model;
-    CrossEntropy loss_fn;  // Often fused with softmax
-    
-    Tensor x({64, 784});
-    Tensor y_true({64, 10});  // One-hot encoded labels
-    
-    Tensor predictions = model(x);  // Probabilities, shape: (64, 10)
-    Tensor loss = loss_fn(predictions, y_true);
-    
-    loss.backward();
-    
-    return 0;
-}
+Tensor x = ...;     // any shape
+Tensor y = gelu(x); // same shape as x
+y.backward();
 ```
+
+### Note
+
+This is the tanh approximation, not the exact erf-based formula (`0.5 * x * (1 + erf(x / sqrt(2)))`). Results are very close but not bit-identical to an exact GELU implementation.
 
 ---
 
-## Leaky ReLU
-
-**Mathematical Definition:**
-```
-LeakyReLU(x) = max(a*x, x)  where α is typically 0.01
-```
-
-**Characteristics:**
-- Allows small gradient for negative inputs (fixes dying ReLU)
-- Smoother gradients than ReLU
-- Minimal computational overhead vs ReLU
-- Rarely dramatically better than ReLU, but safer
-
-**Use Cases:**
-- Alternative when ReLU neurons die
-- When gradient flow in negative region is desired
-
-### Usage Example
+## `Forge::Softmax`
 
 ```cpp
-#include "Forge.h"
-using namespace Forge;
-
-int main() {
-    LeakyRelu leaky_relu;  // Default α = 0.01
-    
-    // Forward pass
-    Tensor x({32, 64});
-    
-    Tensor activated = leaky_relu(x);
-    // Negative values are scaled by α instead of being zeroed
-    
-    std::cout << "Leaky ReLU output:\n" << activated << "\n";
-    
-    // Backward pass
-    activated.backward();
-    
-    return 0;
-}
+Tensor operator()(const Tensor& input) const;
 ```
+
+Computes softmax along the **last axis** of a **4D** tensor, returning a tensor of the same shape. This is the same shape convention used by attention scores, e.g. `(batch, heads, seq_len, seq_len)`.
+
+### Formula
+
+For each row `x` along the last axis:
+
+```
+Softmax(x)_i = exp(x_i - max(x)) / sum_j(exp(x_j - max(x)))
+```
+
+The `- max(x)` subtraction is purely for numerical stability and doesn't change the result.
+
+### Example
+
+```cpp
+Forge::Softmax softmax;
+
+Tensor scores = ...;            // shape (batch, heads, seq_len, seq_len)
+Tensor probs = softmax(scores); // same shape, normalized over the last axis
+probs.backward();
+```
+
+### Note
+
+`Softmax` specifically reduces over axis index `3` (the last of four dims) - passing a 2D or 3D tensor won't normalize correctly. If you need softmax over a different rank/axis, reshape first.
+
+---
+
+## General notes
+
+- **All six are stateless** - there's nothing to configure or store, so `Forge::Relu{}(x)` works just as well as keeping a named instance around.
+- **`Relu`, `Sigmoid`, `Tanh`, `LeakyRelu`, and `Gelu` are purely element-wise** and work on any tensor shape/rank, always preserving it. `Softmax` is the one exception, requiring a 4D input as noted above.
 
 ---
 
