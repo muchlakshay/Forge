@@ -209,33 +209,6 @@ w_map = w_map * 2.0f;  // Scale all weights by 2
 w_map = w_map + 0.01f; // Add small constant (regularization)
 ```
 
-### More Complex Eigen Operations
-
-```cpp
-// 3D tensor: batch_size=4, sequence_length=8, embedding_dim=64
-Tensor embeddings({4, 8, 64}, true);
-embeddings = 0.0f;
-
-auto emb_map = embeddings.as_eigen<float, 3>();
-
-// Initialize embeddings with small random-like values
-for (int b = 0; b < 4; b++) {
-    for (int s = 0; s < 8; s++) {
-        for (int d = 0; d < 64; d++) {
-            emb_map(b, s, d) = (d + s + b) * 0.001f;
-        }
-    }
-}
-
-// Access specific batch sample
-for (int s = 0; s < 8; s++) {
-    for (int d = 0; d < 64; d++) {
-        float val = emb_map(0, s, d);  // First batch item
-        // Use val...
-    }
-}
-```
-
 ---
 
 ## Tensor Properties and Inspection
