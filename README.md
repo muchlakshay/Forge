@@ -403,32 +403,6 @@ std::cout << "Weights shape: " << weights.shape()[0] << " x " << weights.shape()
 std::cout << "Bias shape: " << bias.size() << " elements\n";
 ```
 
-### Manual Weight Inspection and Modification
-
-```cpp
-Linear layer(10, 5);
-
-// Access weights via Eigen
-auto w_map = layer.weights().as_eigen<float, 2>();
-
-// Print weight matrix
-std::cout << "Weight matrix:\n";
-for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < 5; j++) {
-        std::cout << w_map(i, j) << " ";
-    }
-    std::cout << "\n";
-}
-
-// Access bias via Eigen
-auto b_map = layer.bias().as_eigen<float, 4>();
-std::cout << "Bias values: ";
-for (int d = 0; d < 5; d++) {
-    std::cout << b_map(0, 0, 0, d) << " ";
-}
-std::cout << "\n";
-```
-
 ---
 
 ## Layer Properties
