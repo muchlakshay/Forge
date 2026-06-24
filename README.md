@@ -67,8 +67,6 @@ Forge is ideal for:
 - Learning deep learning systems implementation from first principles
 - Experimenting with neural network architectures
 
-  ---
-
 # Tensor Documentation
 
 ## Tensor Class Overview
@@ -96,7 +94,6 @@ class Tensor {
 };
 ```
 
----
 
 ## Creating and Initializing Tensors
 
@@ -143,8 +140,6 @@ matrix = {{1.0f, 2.0f, 3.0f},
           {4.0f, 5.0f, 6.0f}};
 ```
 
----
-
 ## Tensor Manipulation
 
 ### Reshaping
@@ -186,8 +181,6 @@ Tensor first_sample = batch[0];  // Shape: (128, 64)
 Tensor tenth_sample = batch[9];  // Shape: (128, 64)
 ```
 
----
-
 ## Direct Element Access with Eigen
 
 Forge integrates with Eigen for efficient element-wise operations:
@@ -208,8 +201,6 @@ w_map(10, 5) = -0.3f; // weights[10][5]
 w_map = w_map * 2.0f;  // Scale all weights by 2
 w_map = w_map + 0.01f; // Add small constant (regularization)
 ```
-
----
 
 ## Tensor Properties and Inspection
 
@@ -235,8 +226,6 @@ void* data_ptr = t.data();               // Raw pointer to buffer
 // Gradient requirement
 bool requires_grad = t.need_grads();     // true or false
 ```
-
----
 
 ## Automatic Differentiation
 
@@ -310,8 +299,6 @@ class Linear {
 };
 ```
 
----
-
 ## Creating a Linear Layer
 
 ### Basic Constructor
@@ -360,8 +347,6 @@ Linear layer_xu(128, 64, Initializers::xavier_uniform);
 Linear layer_hu(128, 64, Initializers::he_uniform);
 ```
 
----
-
 ## Using Linear Layers
 
 ### Forward Pass
@@ -403,8 +388,6 @@ std::cout << "Weights shape: " << weights.shape()[0] << " x " << weights.shape()
 std::cout << "Bias shape: " << bias.size() << " elements\n";
 ```
 
----
-
 ## Layer Properties
 
 ```cpp
@@ -422,11 +405,11 @@ const auto& w = layer.weights();
 std::cout << "  Weights total elements: " << w.size() << "\n";
 std::cout << "  Bias total elements: " << layer.bias().size() << "\n";
 ```
+---
 # Activations
 
 This module provides the activation functions used inside models. Each one is a small stateless functor - construct it (or use a temporary) and call it like a function on a `Tensor`. Gradients are wired up automatically whenever the input requires them, so you never call a grads function directly; it runs as part of the normal `.backward()` pass.
 
----
 
 ## `Forge::Relu`
 
@@ -452,8 +435,6 @@ Tensor y = relu(x); // same shape as x
 y.backward();
 ```
 
----
-
 ## `Forge::Sigmoid`
 
 ```cpp
@@ -478,8 +459,6 @@ Tensor y = sigmoid(x); // same shape as x, values in (0, 1)
 y.backward();
 ```
 
----
-
 ## `Forge::Tanh`
 
 ```cpp
@@ -503,8 +482,6 @@ Tensor x = ...;      // any shape
 Tensor y = tanh_(x); // same shape as x, values in (-1, 1)
 y.backward();
 ```
-
----
 
 ## `Forge::LeakyRelu`
 
@@ -535,7 +512,6 @@ y.backward();
 
 The negative slope `a` is hardcoded at `0.01` - there's currently no constructor parameter to change it.
 
----
 
 ## `Forge::Gelu`
 
@@ -567,8 +543,6 @@ y.backward();
 ### Note
 
 This is the tanh approximation, not the exact erf-based formula (`0.5 * x * (1 + erf(x / sqrt(2)))`). Results are very close but not bit-identical to an exact GELU implementation.
-
----
 
 ## `Forge::Softmax`
 
@@ -611,7 +585,6 @@ probs.backward();
 
 ---
 
-
 # Loss Functions Documentation
 
 Loss functions quantify the difference between predictions and ground truth.
@@ -632,8 +605,6 @@ Tensor loss = mse(predictions, targets);
 Tensor operator()(const Tensor& predictions, const Tensor& targets);
 ```
 
----
-
 ## Cross-Entropy Loss
 
 ```cpp
@@ -651,8 +622,6 @@ Tensor loss = ce(logits, targets);  // targets: one-hot encoded
 ```cpp
 Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
 ```
-
----
 
 ## Binary Cross-Entropy (BCE)
 
@@ -679,8 +648,6 @@ Two optimizers are currently available:
 
 - **`Forge::SGD`** - stochastic gradient descent, with optional momentum
 - **`Forge::Adam`** - adaptive moment estimation, with optional weight decay
-
----
 
 ## 1. `Forge::SGD`
 
@@ -743,8 +710,6 @@ for (auto& batch : batches) {
     optimizer.update();
 }
 ```
-
----
 
 ## 2. `Forge::Adam`
 
@@ -816,8 +781,6 @@ for (auto& batch : dataloader) {
     optimizer.update();
 }
 ```
-
----
 
 ## Notes & gotchas
 
