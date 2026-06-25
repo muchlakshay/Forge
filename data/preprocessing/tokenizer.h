@@ -11,6 +11,7 @@
 #include <utility>
 #include <regex>
 #include "Eigen/Dense"
+#include "tensor.h"
 
 using EigenMatrixf = Eigen::MatrixXf;
 using EigenMatrixi = Eigen::MatrixXi;
@@ -40,24 +41,24 @@ private:
     Type m_type;
 
     void clean_content(std::string& content) const;
-    StringVec2D split_str(const std::string& str) const;
-    string_pair get_frequent_pair(const StringVec2D& tokens, bool isEncoding = false) const;
-    StringVec2D merge_pair(const StringVec2D& tokens, string_pair pair) const;
+    [[nodiscard]] StringVec2D split_str(const std::string& str) const;
+    [[nodiscard]] string_pair get_frequent_pair(const StringVec2D& tokens, bool isEncoding = false) const;
+    [[nodiscard]] StringVec2D merge_pair(const StringVec2D& tokens, string_pair pair) const;
     void BoW(const std::string& filename);
     void BPE(const std::string& filename, int max_vocab);
-    StringVec submerge_subvec_BPE(StringVec sub_vec) const;
-    EigenVectori encode_str_BPE(const std::string&) const;
-    EigenMatrixi encode_file_BPE(const std::string& filename) const;
+    [[nodiscard]] StringVec submerge_subvec_BPE(StringVec sub_vec) const;
+    [[nodiscard]] EigenVectori encode_str_BPE(const std::string&) const;
+    [[nodiscard]] EigenMatrixi encode_file_BPE(const std::string& filename) const;
 
 public:
     SimpleTokenizer(Type type) : m_type{ type } {};
     void on_file(const std::string& filename, int max_vocab = DEFAULT_MAX_VOCAB);
-    EigenMatrixi encode(std::string str) const;
-    EigenMatrixi encode_file(const std::string& filename, int max_words_len = -1) const;
-    StringVec decode(const EigenVectori& token_ids) const;
+    [[nodiscard]] Forge::Tensor encode(std::string str) const;
+    [[nodiscard]] EigenMatrixi encode_file(const std::string& filename, int max_words_len = -1) const;
+    [[nodiscard]] StringVec decode(const EigenVectori& token_ids) const;
     void save(const std::string& filename) const;
     void load(const std::string& filename);
 
-    auto getIds() const { return m_ids; }
-    int vocabularySize() const { return m_vocabulary_size; }
+    [[nodiscard]] auto getIds() const { return m_ids; }
+    [[nodiscard]] int vocabularySize() const { return m_vocabulary_size; }
 };

@@ -179,8 +179,9 @@ EigenVectori SimpleTokenizer::encode_str_BPE(const std::string& str) const {
 	return encoded_vec;
 }
 
-EigenMatrixi SimpleTokenizer::encode(std::string str) const {
-	return encode_str_BPE(str);
+Forge::Tensor SimpleTokenizer::encode(std::string str) const {
+	auto encoded {encode_str_BPE(str)};
+	return Forge::Tensor::FromHostPtr(encoded.data(), {static_cast<std::size_t>(encoded.size())}, false);
 }
 
 StringVec SimpleTokenizer::decode(const EigenVectori& token_ids) const {
