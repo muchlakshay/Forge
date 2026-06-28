@@ -1,6 +1,6 @@
 # Forge: A Deep Learning Framework from Scratch
 
-**Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on systems-level optimization and educational clarity.
+**Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on first principal building approach and educational clarity.
 
 ## Overview
 
