@@ -2,6 +2,12 @@
 
 **Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on first principal building approach and educational clarity.
 
+- [Overview](#overview)
+- [Tensor](#tensor-documentation)
+- [Linear Layer](#linear-layer-documentation)
+- [Activations](#activations)
+- [Loss functions](#loss-functions-documentation)
+
 ## Overview
 
 Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for performance and simplicity, making it suitable for both learning and production use cases.
