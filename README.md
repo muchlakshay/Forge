@@ -7,6 +7,9 @@
 - [Linear Layer](#linear-layer-documentation)
 - [Activations](#activations)
 - [Loss functions](#loss-functions-documentation)
+- [Optimizers](#optimizers)
+- [LayerNorm](#layernorm)
+- [Self-Attention](#self-attention)
 
 ## Overview
 
