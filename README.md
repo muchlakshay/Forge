@@ -7,7 +7,7 @@
 - [Linear Layer](#linear-layer-documentation)
 - [Activations](#activations)
 - [Loss functions](#loss-functions-documentation)
-- [Optimizers](#optimizers)
+- [Optimizers](#optimizers-documentation)
 - [LayerNorm](#layernorm)
 - [Self-Attention](#self-attention)
 
@@ -649,7 +649,7 @@ Tensor loss = bce(logits, targets);  // targets: 0 or 1
 ```cpp
 Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
 ```
-# Optimizers
+# Optimizers Documentation
 
 This module provides the public-facing optimizers used to train models. Each optimizer owns the parameters it was constructed with, along with any internal state (momentum/moment buffers), and updates those parameters in place each time `update()` is called. Internally, `update()` dispatches to a device-specific backend (currently only CPU supported).
 
