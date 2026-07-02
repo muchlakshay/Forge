@@ -4,6 +4,17 @@
 
 - [Overview](#overview)
 - [Tensor](#tensor-documentation)
+  - [Internal Components](#internal-components)
+  - [Basic Creation](#basic-creation)
+  - [Creating Tensors with Specific Values](#creating-tensors-with-specific-values)
+  - [Initializing from Existing Data](#initializing-from-existing-data)
+  - [Reshaping](#reshaping)
+  - [Cloning and Copying](#cloning-and-copying)
+  - [Indexing](#indexing)
+  - [Eigen support](#direct-element-access-with-eigen)
+  - [Tensor Properties and Inspection](#tensor-properties-and-inspection)
+  - [Setting up Tensors for Backpropagation](#setting-up-tensors-for-backpropagation)
+  - [Advance Gradient Management](#advance-gradient-management)
 - [Linear Layer](#linear-layer-documentation)
 - [Activations](#activations)
 - [Loss functions](#loss-functions-documentation)
@@ -178,7 +189,7 @@ Tensor destination({3, 3});
 destination.copy(original);
 ```
 
-### Slicing/Indexing
+### Indexing
 
 ```cpp
 Tensor batch = Tensor::Zeros({32, 128, 64});  // batch_size=32
