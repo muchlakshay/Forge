@@ -19,7 +19,7 @@
   - [Overview](#linear-class-overview)
   - [Internal Components](#internal-components)
   - [Basic Constructor](#basic-constructor)
-  - [Weight Initialization](weight-initialization-strategies)
+  - [Weight Initialization](#weight-initialization-strategies)
   - [Forward Pass](#forward-pass)
   - [Accessing Parameters](#accessing-weights-and-bias)
   - [Layer Properties](#layer-properties)
