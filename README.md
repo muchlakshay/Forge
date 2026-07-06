@@ -35,6 +35,8 @@
   - [Cross-Entropy Loss](#cross-entropy-loss)
   - [Binary Cross-Entropy Loss](#binary-cross-entropy-bce)
 - [Optimizers](#optimizers-documentation)
+  - [SGD](#forgesgd)
+  - [Adam](#forgeadam)
 - [LayerNorm](#layernorm)
 - [Self-Attention](#self-attention)
 
@@ -685,7 +687,7 @@ Two optimizers are currently available:
 - **`Forge::SGD`** - stochastic gradient descent, with optional momentum
 - **`Forge::Adam`** - adaptive moment estimation, with optional weight decay
 
-## 1. `Forge::SGD`
+## `Forge::SGD`
 
 ### Constructor
 
@@ -747,7 +749,7 @@ for (auto& batch : batches) {
 }
 ```
 
-## 2. `Forge::Adam`
+## `Forge::Adam`
 
 ### Constructor
 
