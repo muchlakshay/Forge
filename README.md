@@ -13,7 +13,7 @@
   - [Indexing](#indexing)
   - [Eigen support](#direct-element-access-with-eigen)
   - [Tensor Properties and Inspection](#tensor-properties-and-inspection)
-  - [Setting up Tensors for Backpropagation](#setting-up-tensors-for-backpropagation)
+  - [Backpropagation / auto-differentitation](#setting-up-tensors-for-backpropagation)
   - [Advance Gradient Management](#advance-gradient-management)
 - [Linear Layer](#linear-layer-documentation)
   - [Overview](#linear-class-overview)
