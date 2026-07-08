@@ -29,7 +29,7 @@
   - [Tanh](#forgetanh)
   - [LeakyRELU](#forgeleakyrelu)
   - [GELU](#forgegelu)
-  - [softmax](#forgesoftmax)
+  - [Softmax](#forgesoftmax)
 - [Loss functions](#loss-functions-documentation)
   - [Mean Squared Error](#mean-squared-error-mse)
   - [Cross-Entropy Loss](#cross-entropy-loss)
