@@ -35,8 +35,8 @@
   - [Cross-Entropy Loss](#cross-entropy-loss)
   - [Binary Cross-Entropy Loss](#binary-cross-entropy-bce)
 - [Optimizers](#optimizers-documentation)
-  - [SGD](#forgesgd)
-  - [Adam](#forgeadam)
+  - [Stochastic Gradient Descent (SGD)](#forgesgd)
+  - [Adaptive Moment Estimation (Adam)](#forgeadam)
 - [LayerNorm](#layernorm)
 - [Self-Attention](#self-attention)
 
