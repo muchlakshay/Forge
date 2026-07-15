@@ -3,7 +3,7 @@
 
 namespace Forge {
     std::vector<std::size_t> compute_strides(const std::vector<std::size_t>& shape);
-    void transpose_AVX2(Tensor& A, Tensor B, const std::vector<std::size_t>& transpose_axis);
+    void transpose_AVX2(const Tensor& A, const Tensor& B, const std::vector<std::size_t>& transpose_axis);
     std::vector<int> precalculate_offsets(
         const std::vector<std::size_t>& strides_A, const std::vector<std::size_t>& strides_B,
         const std::vector<int>& permutation, std::size_t size);
@@ -37,4 +37,6 @@ inline std::vector<int> Forge::precalculate_offsets(const std::vector<std::size_
         offsets[i] = src_flat_idx;
     }
 }
+
+
 
