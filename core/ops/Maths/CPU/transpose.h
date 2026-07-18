@@ -53,7 +53,7 @@ void Forge::transpose_AVX2(const DTYPE *A, DTYPE *B, const std::vector<std::size
     const auto offsets {precalculate_offsets(strides_A, strides_B, permutation, size)};
 
 #pragma omp parallel for schedule(static)
-    for (int i {}; i<end; i-=step) {
+    for (int i {}; i<=end; i+=step) {
         __m256i v_offsets {_mm256_load_si256(reinterpret_cast<const __m256i *>(&(offsets[i])))};
         __m256 v_data {_mm256_i32gather_ps(A, v_offsets, 4)};
         _mm256_storeu_ps(B+i, v_data);
