@@ -24,18 +24,19 @@ inline std::vector<std::size_t> Forge::compute_strides(const std::vector<std::si
 inline std::vector<int> Forge::precalculate_offsets(const std::vector<std::size_t> &strides_A,
     const std::vector<std::size_t>& strides_B, const std::vector<int>& permutation, std::size_t size) {
     std::vector<int> offsets (size);
-    auto rank {strides.size()};
+    auto rank {strides_A.size()};
     std::vector<int> coords_B(rank);
     std::vector<int> coords_A(rank);
 
-    for (int i {}; i<size; i++) {
-        int flat_idx {i}, src_flat_idx {};
+    for (std::size_t i {}; i<size; i++) {
+        std::size_t flat_idx {i}, src_flat_idx {};
         for (int d{}; d<rank; d++) {
             coords_B[d] = flat_idx/strides_B[d];
             flat_idx %= strides_B[d];
             coords_A[permutation[d]] = coords_B[d];
-            src_flat_idx += coords_A[d] * strides_A[d];
         }
+
+        for (std::size_t d{}; d < rank; d++)src_flat_idx += coords_A[d] * strides_A[d];
         offsets[i] = src_flat_idx;
     }
     return offsets;
