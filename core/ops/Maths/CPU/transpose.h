@@ -12,10 +12,10 @@ namespace Forge {
 }
 
 inline std::vector<std::size_t> Forge::compute_strides(const std::vector<std::size_t> &shape) {
-    std::size_t stride {1};
-    std::vector<std::size_t> strides;
+    std::size_t stride {1}, idx {shape.size()-1};
+    std::vector<std::size_t> strides (shape.size());
     for (const auto dim : shape | std::views::reverse) {
-        strides.push_back(stride);
+        strides[idx--] = stride;
         stride *= dim;
     }
     return strides;
