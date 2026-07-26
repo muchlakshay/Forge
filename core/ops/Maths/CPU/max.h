@@ -12,7 +12,6 @@ namespace Forge {
 template<typename DTYPE>
 Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
     if constexpr (std::is_same_v<DTYPE, float>) {
-        std::size_t step {8};
         Tensor temp {A};
         if (axis!=A.shape().size()-1) {
             auto new_shape {A.shape()};
@@ -26,9 +25,16 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
             forge_transpose_AVX2(static_cast<DTYPE*>(A.data()), static_cast<DTYPE*>(temp.data()), A.strides(),
                 A.shape(), permutation, A.size());
         }
-        Tensor opt {{*(&temp.shape().back()-1)}, Dtype::float32, false};
+        auto opt_shape {temp.shape()};
+        opt_shape.back()=1
+
+        Tensor opt {opt_shape, Dtype::float32, false};
         auto* data {static_cast<DTYPE*>(temp.data())};
         auto opt_data {static_cast<DTYPE*>(opt.data())};
+
+        std::size_t step_size {8}, unroll_steps {4};
+        std::size_t total_steps = (temp.shape()[axis] + step_size + 1)/step_size;
+
 
     }
     return {};
