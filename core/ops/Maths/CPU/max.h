@@ -39,7 +39,7 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         auto opt_shape {temp.shape()};
         opt_shape.back()=1;
 
-        auto opt {Tensor::Zeros(opt_shape, false, Dtype::float32)};
+        auto opt {Tensor::Constant({opt_shape}, -10e5, false, Dtype::float32)};
         std::size_t step_size {8}, unroll_steps {4};
         std::size_t i {};
 
@@ -47,6 +47,26 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         auto opt_data {static_cast<DTYPE*>(opt.data())};
 
         auto last_axis_size {temp.shape().back()};
+
+        for (std::size_t row {}; row<(temp.size()/last_axis_size); ++row) {
+            for (; i+step_size*unroll_steps<A.size(); i+=step_size*unroll_steps) {
+                auto row_offset {row*last_axis_size};
+                __m256 x1 {_mm256_loadu_ps(row_offset+data+i)};
+                __m256 x2 {_mm256_loadu_ps(row_offset+data+i+step_size)};
+                __m256 x3 {row_offset+data+i+step_size*2};
+                __m256 x4 {row_offset+data+i+step_size*3};
+
+                float max1 {_mm256_hmax_ps(x1)};
+                float max2 {_mm256_hmax_ps(x2)};
+                float max3 {_mm256_hmax_ps(x3)};
+                float max4 {_mm256_hmax_ps(x4)};
+
+                if (opt_data[row]<max1) opt_data[row]=max1;
+                if (opt_data[row+1]<max2) opt_data[row+1]=max2;
+                if (opt_data[row+2]<max3) opt_data[row+2]=max3;
+                if (opt_data[row+3]<max4) opt_data[row+3]=max4;
+            }
+        }
 
     }
     return {};
