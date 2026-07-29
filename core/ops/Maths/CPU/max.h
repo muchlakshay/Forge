@@ -67,7 +67,24 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
                 if (opt_data[row+3]<max4) opt_data[row+3]=max4;
             }
         }
+        if (i<temp.shape().back()) {
+            for (std::size_t row {}; row<(temp.size()/last_axis_size); ++row) {
+                for (; i<temp.shape().back(); i++) if (opt_data[row]<data[i]) opt_data[row]=data[i];
+            }
+        }
+        if (axis!=A.shape().size()-1) {
+            std::vector<int> permutation (A.shape().size());
+            std::iota(permutation.begin(), permutation.end(), 0);
+            std::swap(permutation[axis], permutation.back());
+            auto new_opt_shape {opt.shape()};
+            std::swap(new_opt_shape[axis], new_opt_shape.back());
 
+            auto opt_trans {Tensor::FromHostPtr(static_cast<float*>(temp.data()), new_opt_shape, A.need_grads())};
+            forge_transpose_AVX2(opt_data, static_cast<float*>(opt_trans.data()), opt.strides(), opt.shape(),
+                permutation);
+            return opt_trans;
+        }
+        return opt;
     }
     return {};
 }
