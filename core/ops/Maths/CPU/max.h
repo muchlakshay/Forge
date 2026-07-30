@@ -3,11 +3,13 @@
 #include "tensor.h"
 #include "transpose.h"
 #include <numeric>
+#include <omp.h>
 
 namespace Forge {
     template <typename DTYPE>
     Tensor forge_max_AVX2(const Tensor& A, int axis);
     float _mm256_hmax_ps(__m256 x);
+    double _mm256_hmax_pd(__m256 x);
 }
 
 inline float Forge::_mm256_hmax_ps(__m256 x) {
@@ -39,22 +41,24 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         auto opt_shape {temp.shape()};
         opt_shape.back()=1;
 
-        auto opt {Tensor::Constant({opt_shape}, -10e5, false, Dtype::float32)};
+        auto opt {Tensor::Constant({opt_shape}, -std::numeric_limits<float>::infinity(), false, Dtype::float32)};
         std::size_t step_size {8}, unroll_steps {4};
         std::size_t i {};
+        std::size_t row{};
 
         auto* data {static_cast<DTYPE*>(temp.data())};
         auto opt_data {static_cast<DTYPE*>(opt.data())};
 
         auto last_axis_size {temp.shape().back()};
+        auto total_rows {temp.size()/last_axis_size};
 
-        for (std::size_t row {}; row<(temp.size()/last_axis_size); ++row) {
-            for (; i+step_size*unroll_steps<A.size(); i+=step_size*unroll_steps) {
-                auto row_offset {row*last_axis_size};
-                __m256 x1 {_mm256_loadu_ps(row_offset+data+i)};
-                __m256 x2 {_mm256_loadu_ps(row_offset+data+i+step_size)};
-                __m256 x3 {row_offset+data+i+step_size*2};
-                __m256 x4 {row_offset+data+i+step_size*3};
+        #pragma omp parallel for schedule(static)
+        for (;row+unroll_steps<total_rows; row+=unroll_steps) {
+            for (; i+step_size*unroll_steps<last_axis_size; i+=step_size*unroll_steps) {
+                __m256 x1 {_mm256_loadu_ps(row*last_axis_size+data+i)};
+                __m256 x2 {_mm256_loadu_ps((row+1)*last_axis_size+data+i)};
+                __m256 x3 {_mm256_loadu_ps((row+2)*last_axis_size+data+i)};
+                __m256 x4 {_mm256_loadu_ps((row+3)*last_axis_size+data+i)};
 
                 float max1 {_mm256_hmax_ps(x1)};
                 float max2 {_mm256_hmax_ps(x2)};
@@ -66,12 +70,19 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
                 if (opt_data[row+2]<max3) opt_data[row+2]=max3;
                 if (opt_data[row+3]<max4) opt_data[row+3]=max4;
             }
+            i=0;
         }
-        if (i<temp.shape().back()) {
-            for (std::size_t row {}; row<(temp.size()/last_axis_size); ++row) {
-                for (; i<temp.shape().back(); i++) if (opt_data[row]<data[i]) opt_data[row]=data[i];
+        if (row<total_rows) {
+            for (;row<total_rows; row++) {
+                for (; i+step_size*unroll_steps<last_axis_size; i+=step_size*unroll_steps) {
+                    __m256 x {_mm256_loadu_ps(row*last_axis_size+data+i)};
+                    float max {_mm256_hmax_ps(x)};
+                    if (opt_data[row]<max) opt_data[row]=max;
+                }
+                i=0;
             }
         }
+
         if (axis!=A.shape().size()-1) {
             std::vector<int> permutation (A.shape().size());
             std::iota(permutation.begin(), permutation.end(), 0);
