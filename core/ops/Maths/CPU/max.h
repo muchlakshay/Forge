@@ -52,9 +52,9 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         auto last_axis_size {temp.shape().back()};
         auto total_rows {temp.size()/last_axis_size};
 
-        #pragma omp parallel for schedule(static)
+        // #pragma omp parallel for schedule(static)
         for (;row+unroll_steps<total_rows; row+=unroll_steps) {
-            for (; i+step_size*unroll_steps<last_axis_size; i+=step_size*unroll_steps) {
+            for (; i+step_size<last_axis_size; i+=step_size) {
                 __m256 x1 {_mm256_loadu_ps(row*last_axis_size+data+i)};
                 __m256 x2 {_mm256_loadu_ps((row+1)*last_axis_size+data+i)};
                 __m256 x3 {_mm256_loadu_ps((row+2)*last_axis_size+data+i)};
@@ -74,12 +74,18 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         }
         if (row<total_rows) {
             for (;row<total_rows; row++) {
-                for (; i+step_size*unroll_steps<last_axis_size; i+=step_size*unroll_steps) {
+                for (; i+step_size<last_axis_size; i+=step_size) {
                     __m256 x {_mm256_loadu_ps(row*last_axis_size+data+i)};
                     float max {_mm256_hmax_ps(x)};
                     if (opt_data[row]<max) opt_data[row]=max;
                 }
                 i=0;
+            }
+        }
+        if (std::size_t j {last_axis_size-(last_axis_size%step_size)};j<last_axis_size) {
+            // #pragma omp parallel for schedule(static)
+            for (std::size_t row {}; row<total_rows; ++row) {
+                for (std::size_t i{j}; i<last_axis_size; i++) if (opt_data[row]<data[i]) opt_data[row]=data[i];
             }
         }
 
