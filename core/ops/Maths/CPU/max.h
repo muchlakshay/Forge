@@ -83,7 +83,7 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
             }
         }
         if (std::size_t j {last_axis_size-(last_axis_size%step_size)};j<last_axis_size) {
-            // #pragma omp parallel for schedule(static)
+             #pragma omp parallel for schedule(static)
             for (std::size_t row {}; row<total_rows; ++row) {
                 for (std::size_t i{j}; i<last_axis_size; i++) if (opt_data[row]<data[i]) opt_data[row]=data[i];
             }
