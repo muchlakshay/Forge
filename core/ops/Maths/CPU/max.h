@@ -9,7 +9,7 @@ namespace Forge {
     template <typename DTYPE>
     Tensor forge_max_AVX2(const Tensor& A, int axis);
     float _mm256_hmax_ps(__m256 x);
-    double _mm256_hmax_pd(__m256 x);
+    double _mm256_hmax_pd(__m256d x);
 }
 
 inline float Forge::_mm256_hmax_ps(__m256 x) {
@@ -21,6 +21,13 @@ inline float Forge::_mm256_hmax_ps(__m256 x) {
 
     return _mm_cvtss_f32(max);
 }
+
+inline double Forge::_mm256_hmax_pd(__m256d x) {
+    __m128d x_casted {_mm256_castpd256_pd128(x)};
+    __m128d x_shuff {_mm_shuffle_pd(x_casted, x_casted, _MM_SHUFFLE(2, 3, 0, 1))};
+    return _mm_cvtsd_f64(_mm_max_pd(x_casted, x_shuff));
+}
+
 
 template<typename DTYPE>
 Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
@@ -42,7 +49,7 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         opt_shape.back()=1;
 
         auto opt {Tensor::Constant({opt_shape}, -std::numeric_limits<float>::infinity(), false, Dtype::float32)};
-        std::size_t step_size {8}, unroll_steps {4};
+        std::size_t step_size {4}, unroll_steps {4};
         std::size_t i {};
         std::size_t row{};
 
