@@ -49,7 +49,7 @@ Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
         opt_shape.back()=1;
 
         auto opt {Tensor::Constant({opt_shape}, -std::numeric_limits<float>::infinity(), false, Dtype::float32)};
-        std::size_t step_size {4}, unroll_steps {4};
+        std::size_t step_size {8}, unroll_steps {4};
         std::size_t i {};
         std::size_t row{};
 
