@@ -23,11 +23,12 @@ inline float Forge::_mm256_hmax_ps(__m256 x) {
 }
 
 inline double Forge::_mm256_hmax_pd(__m256d x) {
-    __m128d x_casted {_mm256_castpd256_pd128(x)};
-    __m128d x_shuff {_mm_shuffle_pd(x_casted, x_casted, _MM_SHUFFLE(2, 3, 0, 1))};
-    return _mm_cvtsd_f64(_mm_max_pd(x_casted, x_shuff));
+    __m128d lower {_mm256_castpd256_pd128(x)};
+    __m128d upper {_mm256_extractf128_pd(x, 1)};
+    __m128d max2 {_mm_max_pd(lower, upper)};
+    __m128d max  {_mm_max_pd(max2, _mm_shuffle_pd(max2, max2, _MM_SHUFFLE2(1, 0)))};
+    return _mm_cvtsd_f64(max);
 }
-
 
 template<typename DTYPE>
 Forge::Tensor Forge::forge_max_AVX2(const Tensor& A, int axis) {
