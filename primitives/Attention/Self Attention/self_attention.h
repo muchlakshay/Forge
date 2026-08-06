@@ -3,6 +3,7 @@
 #include "tensor.h"
 #include "Linear/LinearLayer.h"
 #include "Weights Init/weights_init.h"
+#include "parameter.h"
 
 namespace Forge {
     class SelfAttention;
@@ -27,7 +28,7 @@ public:
     void createMask(std::size_t seq_len);
     auto& mask() const {return m_mask_;}
     auto& linear() {return m_linear;}
-    auto parameters() {return std::vector{&m_query_W, &m_key_W, &m_value_W};}
+    auto parameters() {return std::vector{Parameter{&m_query_W, true}, Parameter{&m_key_W, true}, Parameter{&m_value_W, true}};}
     [[nodiscard]] auto& query() {return m_query_W;}
     [[nodiscard]] auto& key() {return m_key_W;}
     [[nodiscard]] auto& value() {return m_value_W;}
