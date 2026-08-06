@@ -27,6 +27,7 @@ public:
     void createMask(std::size_t seq_len);
     auto& mask() const {return m_mask_;}
     auto& linear() {return m_linear;}
+    auto parameters() {return std::vector{&m_query_W, &m_key_W, &m_value_W};}
     [[nodiscard]] auto& query() {return m_query_W;}
     [[nodiscard]] auto& key() {return m_key_W;}
     [[nodiscard]] auto& value() {return m_value_W;}

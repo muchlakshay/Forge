@@ -20,6 +20,7 @@ public:
     Linear(std::size_t input_size, std::size_t output_size, Initializers initializer=Initializers::xavier_normal,
         Dtype dtype=Dtype::float32, Device device=Device::CPU, bool bias=true);
     Tensor operator()(const Tensor& input) const;
+    auto parameters() {return std::vector{&m_weights, &m_bias};}
     [[nodiscard]] const auto& weights() const { return m_weights; }
     [[nodiscard]] const auto& bias() const { return m_bias; }
     [[nodiscard]] const auto& input_size() const { return m_input_size; }
