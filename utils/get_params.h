@@ -20,10 +20,9 @@ std::vector<Forge::Parameter> Forge::extract_parameters(T& model) {
 
     rfl::apply(
         [&](auto*... members) {
-            ([&]() {
+            ([&] {
                 if constexpr (HasParameters<std::remove_pointer_t<decltype(members)>>) {
                     for (std::vector<Parameter> params {members->parameters()}; auto p : params) {parameters.push_back(p);}
-                    for (auto p : extract_parameters(members)) parameters.push_back(p);
                 }
             }(), ...);
         }, data_members.values());
