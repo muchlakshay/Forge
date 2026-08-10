@@ -10,8 +10,8 @@ namespace Forge {
 }
 
 class Forge::Linear {
-    Tensor m_weights;
-    Tensor m_bias;
+    Tensor m_weights{};
+    Tensor m_bias{};
     DispatchKey m_dispatch_key;
     std::size_t m_input_size, m_output_size;
     bool m_using_bias;
@@ -20,6 +20,7 @@ class Forge::Linear {
 public:
     Linear(std::size_t input_size, std::size_t output_size, Initializers initializer=Initializers::xavier_normal,
         Dtype dtype=Dtype::float32, Device device=Device::CPU, bool bias=true);
+    Linear() = default;
     Tensor operator()(const Tensor& input) const;
     auto parameters() {return std::vector{Parameter{&m_weights, true}, Parameter{&m_bias, false}};}
     [[nodiscard]] const auto& weights() const { return m_weights; }

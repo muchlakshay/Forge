@@ -15,6 +15,7 @@ class Forge::LayerNorm {
     bool m_need_grads;
 public:
     LayerNorm(const std::size_t d_model, const Dtype dtype, const Device& device, bool need_grads=true);
+    LayerNorm() = default;
     Tensor operator()(const Tensor& input);
     auto& gamma() {return m_gamma;}
     auto& beta() {return m_beta;}

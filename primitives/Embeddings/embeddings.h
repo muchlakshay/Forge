@@ -16,6 +16,7 @@ class Forge::Embedding {
 public:
     Embedding(std::size_t d_model, std::size_t vocab_size, Dtype dtype=Dtype::float32,
         bool need_grads=true, Initializers initializer = Initializers::xavier_normal, Device device=Device::CPU);
+    Embedding() = default;
 
     Tensor operator()(const Tensor& seq_ids);
     auto& all_embeddings() { return m_embeddings; }
