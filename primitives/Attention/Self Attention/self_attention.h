@@ -31,8 +31,8 @@ public:
     auto& linear() {return m_linear;}
     auto parameters() {
         auto linear_params {m_linear.parameters()};
-        return std::vector{Parameter{&m_query_W, true}, Parameter{&m_key_W, true},
-        Parameter{&m_value_W, true}, linear_params[0], linear_params[1]};}
+        return std::vector{Parameter{&m_query_W, true, "query.w"}, Parameter{&m_key_W, true, "key.w"},
+        Parameter{&m_value_W, true, "value.w"}, linear_params[0]};}
     [[nodiscard]] auto& query() {return m_query_W;}
     [[nodiscard]] auto& key() {return m_key_W;}
     [[nodiscard]] auto& value() {return m_value_W;}

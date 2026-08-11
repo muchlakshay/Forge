@@ -22,7 +22,7 @@ public:
         Dtype dtype=Dtype::float32, Device device=Device::CPU, bool bias=true);
     Linear() = default;
     Tensor operator()(const Tensor& input) const;
-    auto parameters() {return std::vector{Parameter{&m_weights, true}, Parameter{&m_bias, false}};}
+    auto parameters() {return std::vector{Parameter{&m_weights, true, "linear.w"}, Parameter{&m_bias, false, "linear.b"}};}
     [[nodiscard]] const auto& weights() const { return m_weights; }
     [[nodiscard]] const auto& bias() const { return m_bias; }
     [[nodiscard]] const auto& input_size() const { return m_input_size; }

@@ -37,4 +37,50 @@ inline std::size_t Forge::get_dtype_size(Dtype dtype) {
 }
 
 
+template <typename T>
+void Forge::save(T& data_members, const std::string& filename) {
+    auto view {rfl::to_view(data_members)};
+    std::map<std::string, TensorMetadata> header_map;
+    std::map<std::string, Tensor*> params;
+    std::size_t offset{};
+
+    view.apply([&](auto& member) {
+        if constexpr (auto value {member.value()}; HasParameters<std::remove_pointer_t<decltype(value)>>) {
+            auto name {member.name()};
+            for (std::vector<Parameter> parameters {value->parameters()}; auto p : parameters) {
+                TensorMetadata metadata;
+                metadata.dtype = get_dtype(p.m_param_ptr->dtype());
+                metadata.shape = p.m_param_ptr->shape();
+                metadata.data_offsets = std::vector{offset, offset+p.m_param_ptr->size()*get_dtype_size(p.m_param_ptr->dtype())};
+                offset = metadata.data_offsets.back();
+
+                auto param_name {std::string(name)+"."+p.name};
+                header_map[param_name] = metadata;
+                params[param_name] = p.m_param_ptr;
+            }
+        }
+    });
+
+    auto json_header {rfl::json::write(header_map)};
+    std::size_t header_size {json_header.size()};
+    auto total_header_size {header_size+8};
+    auto rem {total_header_size%8};
+
+    if (rem!=0) {
+        auto pad_size {8-rem};
+        json_header.append(pad_size, ' ');
+        header_size = json_header.size();
+    }
+
+    std::ofstream file(filename, std::ios::binary);
+    if (!file.is_open()) throw std::runtime_error(std::format("Couldn't open file '{}'", filename));
+    uint64_t  header_size_uint {static_cast<uint64_t>(header_size)};
+    file.write(reinterpret_cast<const char*>(&header_size_uint), sizeof(header_size_uint));
+    file.write(json_header.data(), header_size);
+    for (auto& hm : header_map) {
+        auto tensor {*params[hm.first]};
+        file.write(static_cast<const char*>(tensor.data()), tensor.size()*get_dtype_size(tensor.dtype()));
+    }
+    file.close();
+}
 

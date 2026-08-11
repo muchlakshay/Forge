@@ -19,7 +19,7 @@ public:
     Tensor operator()(const Tensor& input);
     auto& gamma() {return m_gamma;}
     auto& beta() {return m_beta;}
-    auto parameters() {return std::vector{Parameter{&m_gamma, false}, Parameter{&m_beta, false}};}
+    auto parameters() {return std::vector{Parameter{&m_gamma, false, "ln.gamma"}, Parameter{&m_beta, false, "ln.beta"}};}
     [[nodiscard]] auto d_model() const {return m_d_model;}
     [[nodiscard]] auto d_device() const {return m_device;}
     [[nodiscard]] auto dtype() const {return m_dtype;}

@@ -20,7 +20,7 @@ public:
 
     Tensor operator()(const Tensor& seq_ids);
     auto& all_embeddings() { return m_embeddings; }
-    auto parameters() {return std::vector{Parameter{&m_embeddings, true}};}
+    auto parameters() {return std::vector{Parameter{&m_embeddings, true, "embd.w"}};}
     [[nodiscard]] auto d_model() const { return m_d_model; }
     [[nodiscard]] auto vocab_size() const { return m_vocab_size; }
 };
