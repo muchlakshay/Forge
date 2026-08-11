@@ -12,6 +12,8 @@ namespace Forge {
 
     template <typename T>
     void save(T& data_members, const std::string& filename);
+    template <typename T>
+    void load(T& data_members, const std::string& filename);
 
     std::map<std::string, Tensor> load_safetensors(const std::string& filename);
 
@@ -142,4 +144,15 @@ inline std::map<std::string, Forge::Tensor> Forge::load_safetensors(const std::s
         state[entry.first] = data;
     }
     return state;
+}
+
+template<typename T>
+void Forge::load(T &data_members, const std::string &filename) {
+    auto loaded_state {load_safetensors(filename)};
+    auto state_dict {get_state_dict(data_members)};
+
+    if (loaded_state.size() != state_dict.size()) throw std::runtime_error(
+        std::format("Couldn't load '{}, Architecture Differs'", filename));
+
+    for (auto& entry : loaded_state) *state_dict[entry.first] = entry.second;
 }
