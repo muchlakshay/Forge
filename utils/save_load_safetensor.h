@@ -8,9 +8,12 @@
 namespace Forge {
     std::string get_dtype(Dtype dtype);
     std::size_t get_dtype_size(Dtype dtype);
+    Dtype str_to_dtype(std::string str);
 
     template <typename T>
     void save(T& data_members, const std::string& filename);
+
+    std::map<std::string, Tensor> load_safetensors(const std::string& filename);
 
     struct TensorMetadata {
         std::string dtype;
@@ -39,6 +42,14 @@ inline std::size_t Forge::get_dtype_size(Dtype dtype) {
         default: throw std::invalid_argument("Unsupported dtype");
     }
 }
+
+inline Forge::Dtype Forge::str_to_dtype(std::string str) {
+    if (str == "F16") return Dtype::float16;
+    if (str == "F32") return Dtype::float32;
+    if (str == "F64") return Dtype::float64;
+    throw std::invalid_argument("Unsupported dtype");
+}
+
 
 template<typename T>
 std::map<std::string, Forge::Tensor*> Forge::get_state_dict(T &data_members) {
@@ -104,4 +115,5 @@ void Forge::save(T& data_members, const std::string& filename) {
     }
     file.close();
 }
+
 
