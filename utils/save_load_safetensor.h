@@ -116,4 +116,30 @@ void Forge::save(T& data_members, const std::string& filename) {
     file.close();
 }
 
+inline std::map<std::string, Forge::Tensor> Forge::load_safetensors(const std::string &filename) {
+    std::ifstream file{filename, std::ios::binary};
+    if (!file.is_open()) throw std::runtime_error(std::format("Couldn't open file '{}'", filename));
 
+    std::map<std::string, TensorMetadata> metadata{};
+    std::map<std::string, Tensor> state;
+    uint64_t header_size {};
+    std::string json_header;
+
+    file.read(reinterpret_cast<char*>(&header_size), sizeof(header_size));
+    json_header.resize(header_size);
+    file.read(json_header.data(), static_cast<std::streamsize>(header_size));
+    std::size_t fptr {file.tellg()};
+
+    metadata = rfl::json::read<decltype(metadata)>(json_header).value();
+    for (auto& entry : metadata) {
+        auto& md {entry.second};
+        Tensor data {{md.shape}, str_to_dtype(md.dtype), false, Device::CPU};
+
+        file.seekg(fptr+md.data_offsets[0]);
+        file.read(static_cast<char*>(data.data()), data.size()*get_dtype_size(data.dtype()));
+        file.seekg(fptr);
+
+        state[entry.first] = data;
+    }
+    return state;
+}
