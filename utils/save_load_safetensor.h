@@ -17,7 +17,11 @@ namespace Forge {
         std::vector<std::size_t> shape;
         std::vector<std::size_t> data_offsets;
     };
+
+    template <typename T>
+    std::map<std::string, Tensor*> get_state_dict(T& data_members);
 }
+
 inline std::string Forge::get_dtype(const Dtype dtype) {
     switch (dtype) {
         case Dtype::float16: return "F16";
@@ -36,6 +40,23 @@ inline std::size_t Forge::get_dtype_size(Dtype dtype) {
     }
 }
 
+template<typename T>
+std::map<std::string, Forge::Tensor*> Forge::get_state_dict(T &data_members) {
+    auto view {rfl::to_view(data_members)};
+    std::map<std::string, Tensor*> state_dict;
+    view.apply(
+        [&state_dict](auto& member) {
+            auto mem_name {member.name()};
+            if constexpr (auto value {member.value()}; HasParameters<std::remove_pointer_t<decltype(value)>>) {
+                for (std::vector<Parameter> parameters {value->parameters()}; auto p : parameters) {
+                    auto param_name {std::string{mem_name}+"."+p.name};
+                    state_dict[param_name] = p.m_param_ptr;
+                }
+            }
+        }
+    );
+    return state_dict;
+}
 
 template <typename T>
 void Forge::save(T& data_members, const std::string& filename) {
