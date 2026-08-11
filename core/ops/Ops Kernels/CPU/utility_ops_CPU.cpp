@@ -64,7 +64,7 @@ void Forge::StorageCopyCPU::copy_storage(const std::shared_ptr<StorageAbstract>&
 
 void Forge::RandomCPU::randomize(Tensor &tensor, Initializers initializer) const {
     static WeightsInitCPU weights_init_cpu;
-    weights_init_cpu.initialize(tensor, tensor.shape(), initializer);
+    weights_init_cpu.initialize(tensor, initializer);
 }
 
 void Forge::BroadcastAddCPU::add(const Tensor &A, const Tensor &B, const std::vector<int>& bcast_dims, Tensor &opt) const {
