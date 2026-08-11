@@ -2,9 +2,13 @@
 
 #include "autograd/attach_node.h"
 
-Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype, bool need_grads,
-                      Forge::Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_strides(shape.size(), 0), m_need_grads{need_grads},
+Forge::Tensor::Tensor(const std::vector<std::size_t>& shape, Dtype dtype, bool need_grads,
+                      Device device) : m_device{device}, m_dtype{dtype}, m_shape{shape}, m_strides(shape.size(), 0), m_need_grads{need_grads},
                                               m_dispatch_key {device==Device::CPU?DispatchKey::CPU : DispatchKey::CUDA}{
+
+    DISPATCH_ALL_TYPES(dtype, device, [&] {
+       if (std::is_same_v<NoFp16Support, scalar_t>) throw std::runtime_error("NoFp16Support For Compiler");
+    });
 
     std::size_t size {1u};
     for (int i = shape.size()-1; i>=0; i--) {
@@ -122,6 +126,7 @@ Forge::Tensor Forge::Tensor::BroadcastAdd(const Tensor &another, const std::vect
     Tensor opt {{m_shape}, m_dtype, m_need_grads || another.need_grads(), m_device};
     const auto* impl {dispatcher().lookup<BroadcastAddAbstract>(UtilityOps::bcast_add, m_dispatch_key)};
     impl->add(*this, another, bcast_dims, opt);
+
     if (opt.need_grads()) {
         auto bcast_dims_tensor {FromHostPtr(const_cast<int*>(bcast_dims.data()), {bcast_dims.size()}, false).clone()};
         attach_node<BroadcastAddGradsAbstract, 3>(opt, m_device, dispatcher(),
