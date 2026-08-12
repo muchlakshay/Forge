@@ -3,6 +3,7 @@
 #include "../Dispatcher/primitive_dispatcher.h"
 #include "../Weights Init/weights_init.h"
 #include "parameter.h"
+#include "instance_tracker.h"
 
 namespace Forge {
     class Linear;
@@ -17,12 +18,17 @@ class Forge::Linear {
     bool m_using_bias;
     Dtype m_dtype;
     Device m_device;
+    inline static InstanceTracker m_tracker;
+    int m_cnt {};
 public:
     Linear(std::size_t input_size, std::size_t output_size, Initializers initializer=Initializers::xavier_normal,
         Dtype dtype=Dtype::float32, Device device=Device::CPU, bool bias=true);
-    Linear() = default;
+    Linear(){m_cnt=m_tracker.m_count; ++m_tracker.m_count;}
     Tensor operator()(const Tensor& input) const;
-    auto parameters() {return std::vector{Parameter{&m_weights, true, "linear.w"}, Parameter{&m_bias, false, "linear.b"}};}
+    auto parameters() {
+        return std::vector{Parameter{&m_weights, true, std::format("lin.{}.w", m_cnt)},
+            Parameter{&m_bias, false, std::format("lin.{}.b", m_cnt)}};
+    }
     [[nodiscard]] const auto& weights() const { return m_weights; }
     [[nodiscard]] const auto& bias() const { return m_bias; }
     [[nodiscard]] const auto& input_size() const { return m_input_size; }

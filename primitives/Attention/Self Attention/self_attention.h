@@ -4,6 +4,7 @@
 #include "Linear/LinearLayer.h"
 #include "Weights Init/weights_init.h"
 #include "parameter.h"
+#include "primitives/instance_tracker.h"
 
 namespace Forge {
     class SelfAttention;
@@ -21,18 +22,18 @@ class Forge::SelfAttention {
     std::size_t m_d_model{};
     Device m_device;
     Dtype m_dtype;
+    inline static InstanceTracker m_tracker{};
+    int m_cnt {};
 public:
     SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads, bool mask,
-        Device device, Dtype=Dtype::float32, Initializers initializer=Initializers::he_normal);
-    SelfAttention() = default;
+        bool qkv_bias=false, bool proj_bias=false, Device device=Device::CPU, Dtype=Dtype::float32,
+        Initializers initializer=Initializers::he_normal);
+    SelfAttention() {m_cnt=m_tracker.m_count; ++m_tracker.m_count;}
     Tensor operator()(const Tensor& input) const;
     void createMask(std::size_t seq_len);
     auto& mask() const {return m_mask_;}
     auto& linear() {return m_linear;}
-    auto parameters() {
-        auto linear_params {m_linear.parameters()};
-        return std::vector{Parameter{&m_query_W, true, "query.w"}, Parameter{&m_key_W, true, "key.w"},
-        Parameter{&m_value_W, true, "value.w"}, linear_params[0]};}
+    std::vector<Parameter> parameters();
     [[nodiscard]] auto& query() {return m_query_W;}
     [[nodiscard]] auto& key() {return m_key_W;}
     [[nodiscard]] auto& value() {return m_value_W;}

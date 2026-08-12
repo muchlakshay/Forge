@@ -7,12 +7,13 @@ Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, Initializ
 Device device, bool bias)
 : m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_input_size{input_size},
 m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}{
-
+    m_cnt = m_tracker.m_count;
+    ++m_tracker.m_count;
     m_weights = Tensor{{output_size, input_size}, dtype, true, device};
     if (bias) m_bias = Tensor::Zeros({1, output_size}, true, dtype, device);
     static const auto* weight_initializer {primitive_dispatcher().lookup<WeightsInitAbstract>(
        primitive_ops::weightsInit, DispatchKey::CPU)};
-    weight_initializer->initialize(m_weights, m_weights.shape(), initializer);
+    weight_initializer->initialize(m_weights, initializer);
 }
 
 
@@ -27,7 +28,11 @@ Forge::Tensor Forge::Linear::operator()(const Tensor &input) const {
 
     bool need_grads {input.need_grads() || weights().need_grads() || (m_using_bias && m_bias.need_grads())};
     Tensor output {{output_shape}, m_dtype, need_grads, m_device};
+
+    auto start = std::chrono::steady_clock::now();
     forward_fn->forward(input, output, m_weights, m_bias, m_using_bias);
+    auto end = std::chrono::steady_clock::now();
+    linear_time+=std::chrono::duration<float>{end - start}.count();
 
     attach_node<LinearGradsAbstract, 3>(output, m_device, primitive_dispatcher(), primitive_ops::linear,
         input, m_weights, m_bias);
