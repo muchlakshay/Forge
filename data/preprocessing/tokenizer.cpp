@@ -1,18 +1,21 @@
 #include "tokenizer.h"
 
+#include <utility>
+
 void print2(StringVec vec) { for (const auto& s : vec)std::cout << s << " "; std::cout << "\n"; }
 
-StringVec2D SimpleTokenizer::split_str(const std::string& str) const {
+StringVec2D SimpleTokenizer::split_str(const std::string& str, std::function<void(std::string&)> transformation) const {
 	StringVec2D tokens;
-	std::vector < std::string > word_vec;
+	StringVec word_vec;
 
 	std::regex pattern(R"('s|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^\sA-Za-z0-9_]+|\s+)");
 	auto word_start{ std::sregex_iterator(str.begin(), str.end(), pattern) };
 	auto word_end{ std::sregex_iterator() };
 
 	for (auto i{ word_start }; i != word_end; ++i) {
-		std::smatch word{ *i };
-		for (const auto& c : word.str()) word_vec.push_back(std::string(1, c));
+		std::string word{ i->str() };
+		if (transformation!=nullptr) transformation(word);
+		for (const auto& c : word) word_vec.push_back(std::string(1, c));
 		tokens.push_back(word_vec);
 		word_vec.clear();
 	}
@@ -150,9 +153,10 @@ StringVec SimpleTokenizer::submerge_subvec_BPE(StringVec sub_vec) const {
 	return sub_vec;
 }
 
-EigenVectori SimpleTokenizer::encode_str_BPE(const std::string& str) const {
+EigenVectori SimpleTokenizer::encode_str_BPE(const std::string& str,
+	std::function<void(std::string&)> transformation) const {
 
-	StringVec2D tokens{ split_str(str) };
+	StringVec2D tokens{ split_str(str, std::move(transformation)) };
 	// print2(tokens[0]);
 	// print2(tokens[1]);
 	std::vector<int> final_tokens_ids;
@@ -179,12 +183,13 @@ EigenVectori SimpleTokenizer::encode_str_BPE(const std::string& str) const {
 	return encoded_vec;
 }
 
-Forge::Tensor SimpleTokenizer::encode(std::string str) const {
-	auto encoded {encode_str_BPE(str)};
-	return Forge::Tensor::FromHostPtr(encoded.data(), {static_cast<std::size_t>(encoded.size())}, false);
+Forge::Tensor SimpleTokenizer::encode(std::string str, std::function<void(std::string&)> transformation) const {
+	auto encoded {encode_str_BPE(str, std::move(transformation))};
+	return Forge::Tensor::FromHostPtr(encoded.data(), {static_cast<std::size_t>(encoded.size())}, false).clone();
 }
 
-StringVec SimpleTokenizer::decode(const EigenVectori& token_ids) const {
+StringVec SimpleTokenizer::decode(const Forge::Tensor& ids) const {
+	EigenVectori token_ids { Eigen::Map<Eigen::VectorXi>(static_cast<int*>(ids.data()), ids.size())};
 	StringVec str_vec;
 	for (int i{}; i < token_ids.size(); ++i) {
 		if (token_ids[i] > m_tokens.size())
@@ -250,6 +255,7 @@ void SimpleTokenizer::load(const std::string& filename) {
 		return;
 	}
 	file.read(reinterpret_cast<char*>(&m_vocabulary_size), sizeof(m_vocabulary_size));
+
 	if (m_vocabulary_size > 0) m_tokens.resize(m_vocabulary_size);
 	for (int i{}; i < m_vocabulary_size; ++i) {
 		std::string vocab;
@@ -257,7 +263,7 @@ void SimpleTokenizer::load(const std::string& filename) {
 		int token_id{};
 		file.read(reinterpret_cast<char*>(&vocab_str_len), sizeof(vocab_str_len));
 		vocab.resize(vocab_str_len);
-		file.read(const_cast<char*>(vocab.data()), vocab_str_len);
+		file.read(vocab.data(), vocab_str_len);
 		file.read(reinterpret_cast<char*>(&token_id), sizeof(token_id));
 
 		m_ids[vocab] = token_id;

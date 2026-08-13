@@ -41,24 +41,24 @@ private:
     Type m_type;
 
     void clean_content(std::string& content) const;
-    [[nodiscard]] StringVec2D split_str(const std::string& str) const;
+    [[nodiscard]] StringVec2D split_str(const std::string& str, std::function<void(std::string&)> transformation=nullptr) const;
     [[nodiscard]] string_pair get_frequent_pair(const StringVec2D& tokens, bool isEncoding = false) const;
     [[nodiscard]] StringVec2D merge_pair(const StringVec2D& tokens, string_pair pair) const;
     void BoW(const std::string& filename);
     void BPE(const std::string& filename, int max_vocab);
     [[nodiscard]] StringVec submerge_subvec_BPE(StringVec sub_vec) const;
-    [[nodiscard]] EigenVectori encode_str_BPE(const std::string&) const;
+    [[nodiscard]] EigenVectori encode_str_BPE(const std::string&, std::function<void(std::string&)> transformation=nullptr) const;
     [[nodiscard]] EigenMatrixi encode_file_BPE(const std::string& filename) const;
 
 public:
     SimpleTokenizer(Type type) : m_type{ type } {};
     void on_file(const std::string& filename, int max_vocab = DEFAULT_MAX_VOCAB);
-    [[nodiscard]] Forge::Tensor encode(std::string str) const;
+    [[nodiscard]] Forge::Tensor encode(std::string str, std::function<void(std::string&)> transformation=nullptr) const;
     [[nodiscard]] EigenMatrixi encode_file(const std::string& filename, int max_words_len = -1) const;
-    [[nodiscard]] StringVec decode(const EigenVectori& token_ids) const;
+    [[nodiscard]] StringVec decode(const Forge::Tensor& token_ids) const;
     void save(const std::string& filename) const;
     void load(const std::string& filename);
 
     [[nodiscard]] auto getIds() const { return m_ids; }
-    [[nodiscard]] int vocabularySize() const { return m_vocabulary_size; }
+    [[nodiscard]] auto vocabularySize() const { return m_ids.size(); }
 };
