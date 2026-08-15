@@ -6,11 +6,14 @@
 #include "mask_abstract.h"
 
 Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, std::size_t V_dims, std::size_t heads,
-    bool mask, bool qkv_bias, bool proj_bias, Device device, Dtype dtype, Initializers initializer) : m_query_W {{heads, d_model, Q_K_dims}, dtype, true, device},
-    m_key_W{{heads, d_model, Q_K_dims}, dtype, true, device}, m_value_W {{heads, d_model, V_dims}, dtype, true, device},
-    m_linear{V_dims * heads, d_model, initializer, dtype, device, false},
-    m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_heads{heads}, m_d_model{d_model},
-    m_device {device}, m_dtype{dtype}{
+    bool mask, bool need_grads, bool qkv_bias, bool proj_bias, Device device, Dtype dtype, Initializers initializer)
+    : m_query_W {{heads, d_model, Q_K_dims}, dtype, need_grads, device},
+    m_key_W{{heads, d_model, Q_K_dims}, dtype, need_grads, device},
+    m_value_W {{heads, d_model, V_dims}, dtype, need_grads, device},
+    m_linear{V_dims * heads, d_model, need_grads, proj_bias, initializer, dtype, device},
+    m_mask{mask}, m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA},
+    m_heads{heads}, m_d_model{d_model}, m_device {device}, m_dtype{dtype}, m_qkv_bias{qkv_bias},
+    m_proj_bias{proj_bias}, m_need_grads{need_grads}{
 
     m_cnt = m_tracker.m_count;
     ++m_tracker.m_count;
@@ -19,9 +22,18 @@ Forge::SelfAttention::SelfAttention(std::size_t d_model, std::size_t Q_K_dims, s
     init->initialize(m_query_W, initializer);
     init->initialize(m_key_W, initializer);
     init->initialize(m_value_W, initializer);
+
+    if (qkv_bias) {
+        m_Q_bias = Tensor{{heads, Q_K_dims}, dtype, need_grads, device};
+        m_K_bias = Tensor{{heads, Q_K_dims}, dtype, need_grads, device};
+        m_V_bias = Tensor{{heads, V_dims}, dtype, need_grads, device};
+        init->initialize(m_Q_bias, initializer);
+        init->initialize(m_K_bias, initializer);
+        init->initialize(m_V_bias, initializer);
+    }
 }
 
-Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
+Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) {
     if (input.shape().size()>3) throw std::invalid_argument("input tensor must be rank 3 at max [batch, seq_len, d_model]");
     if (m_mask && m_mask_.shape().empty()) throw std::runtime_error("create a mask prior to forward pass");
     if (auto seq_len {input.shape()[0]}, mask_seq_len {m_mask_.shape()[0]}; m_mask_.shape()[0]!=seq_len)
@@ -31,7 +43,8 @@ Forge::Tensor Forge::SelfAttention::operator()(const Tensor &input) const {
     Tensor output {};
     const auto* impl {primitive_dispatcher().lookup<SelfAttentionImplAbstract>(primitive_ops::selfAttention, m_dispatch_key)};
     auto start = std::chrono::steady_clock::now();
-    impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_linear, m_heads, m_d_model, m_mask);
+    impl->forward(input, m_query_W, m_key_W, m_value_W, output, m_mask_, m_Q_bias, m_K_bias,
+        m_V_bias, m_linear, m_heads, m_d_model, m_mask);
     auto end = std::chrono::steady_clock::now();
     attention_time+=std::chrono::duration<float>{end - start}.count();
     return output;
@@ -55,7 +68,7 @@ std::vector<Forge::Parameter> Forge::SelfAttention::parameters() {
         Parameter{&m_value_W, true, std::format("attn.{}.v.w", m_cnt)},
         linear_params[0]
     };
-
+    if (m_proj_bias) params.push_back(linear_params[1]);
     return params;
 }
 
