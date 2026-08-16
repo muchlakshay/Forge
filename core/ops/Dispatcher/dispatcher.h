@@ -26,40 +26,57 @@ namespace Forge {
     #endif
 }
 
+// #define DISPATCH_ALL_TYPES(DTYPE, DEVICE, ...)\
+// [&]() {                                \
+// switch (DTYPE) {                       \
+// case Forge::Dtype::float16: {          \
+// if(DEVICE==Forge::Device::CUDA){       \
+// throw std::runtime_error("float16 CUDA not implemented"); \
+// }                                      \
+// else {                                 \
+//  using scalar_t = Forge::native_fp16_t;\
+// }                                      \
+// break ;                                \
+// }                                      \
+// case Forge::Dtype::float32: {          \
+// using scalar_t = float;                \
+// __VA_ARGS__();                         \
+// break;                                 \
+// }                                      \
+// case Forge::Dtype::float64: {          \
+// using scalar_t = double;               \
+// __VA_ARGS__();                         \
+// break;                                 \
+// }                                      \
+// case Forge::Dtype::int16: {            \
+// using scalar_t = std::int16_t;         \
+// __VA_ARGS__();                         \
+// break;                                 \
+// }                                      \
+// case Forge::Dtype::int32: {            \
+// using scalar_t = std::int32_t;         \
+// __VA_ARGS__();                         \
+// break;                                 \
+// }                                      \
+// case Forge::Dtype::int64: {            \
+//  using scalar_t = std::int64_t;         \
+//  __VA_ARGS__();                         \
+//  break;                                 \
+//  }                                      \
+// default: throw std::runtime_error("Unsupported type");\
+// }                                      \
+// }()
+
 #define DISPATCH_ALL_TYPES(DTYPE, DEVICE, ...)\
 [&]() {                                \
 switch (DTYPE) {                       \
-case Forge::Dtype::float16: {          \
-if(DEVICE==Forge::Device::CUDA){       \
-throw std::runtime_error("float16 CUDA not implemented"); \
-}                                      \
-else {                                 \
- using scalar_t = Forge::native_fp16_t;\
-}                                      \
-break ;                                \
-}                                      \
 case Forge::Dtype::float32: {          \
 using scalar_t = float;                \
 __VA_ARGS__();                         \
 break;                                 \
 }                                      \
-case Forge::Dtype::float64: {          \
-using scalar_t = double;               \
-__VA_ARGS__();                         \
-break;                                 \
-}                                      \
-case Forge::Dtype::int16: {            \
-using scalar_t = std::int16_t;         \
-__VA_ARGS__();                         \
-break;                                 \
-}                                      \
 case Forge::Dtype::int32: {            \
 using scalar_t = std::int32_t;         \
-__VA_ARGS__();                         \
-break;                                 \
-}                                      \
-case Forge::Dtype::int64: {            \
-using scalar_t = std::int64_t;         \
 __VA_ARGS__();                         \
 break;                                 \
 }                                      \

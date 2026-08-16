@@ -8,6 +8,7 @@
 Forge::Embedding::Embedding(std::size_t d_model, std::size_t vocab_size, Dtype dtype,bool need_grads,
                             Initializers initializer, Device device) : m_embeddings{Tensor::Random({vocab_size, d_model}, dtype, initializer, device, need_grads)},
                                                                        m_d_model{d_model}, m_vocab_size{vocab_size} {
+    if (dtype==Dtype::int32) throw std::runtime_error("Dtype cant be int32");
     m_cnt = m_tracker.m_count;
     ++m_tracker.m_count;
 }

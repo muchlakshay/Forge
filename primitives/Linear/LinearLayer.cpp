@@ -7,6 +7,7 @@ Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, bool need
 Device device)
 : m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_input_size{input_size},
 m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}, m_need_grads{need_grads}{
+    if (dtype==Dtype::int32) throw std::runtime_error("Dtype cant be int32");
     m_cnt = m_tracker.m_count;
     ++m_tracker.m_count;
     m_weights = Tensor{{output_size, input_size}, dtype, m_need_grads, device};
