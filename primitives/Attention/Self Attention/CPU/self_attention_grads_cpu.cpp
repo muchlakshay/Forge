@@ -2,12 +2,13 @@
 #include "tensor.h"
 
 void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor &Q_W, const Tensor &K_W, const Tensor &V_W,
-    const Tensor &QcKs, const Tensor &atten_scores, const Tensor &AcVr, const  Tensor& mask, const Tensor& opt_l,
-    const Tensor &opt) const {
+    const Tensor& Q_bias, const Tensor& K_bias, const Tensor& V_bias, const Tensor &QcKs, const Tensor &atten_scores, const Tensor &AcVr, const  Tensor& mask,
+    const Tensor& opt_l, const Tensor &opt) const {
     using grads_t = float;
-
     opt_l.gradients() = opt.gradients();
     DISPATCH_ALL_TYPES(inp.dtype(), inp.device(), [&] {
+
+        auto us = std::chrono::steady_clock::now();
         auto inp_map {inp.as_eigen<scalar_t, 3>()};
         auto Q_W_map {Q_W.as_eigen<scalar_t, 3>()};
         auto K_W_map {K_W.as_eigen<scalar_t, 3>()};
@@ -24,7 +25,7 @@ void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor
         auto Q_K_dims {Q_W.shape().back()};
         auto V_dims {static_cast<std::size_t>(V_W_map.dimensions()[2])};
         auto heads {static_cast<std::size_t>(Q_W.shape()[0])};
-        auto d_model {static_cast<std::size_t>(inp.shape()[2])};
+        auto d_model {inp.shape().back()};
 
         Tensor Q_T_t {{batch_size, heads, seq_len, Q_K_dims}, Q_W.dtype(), false};
         Tensor K_T_t {{batch_size, heads, seq_len, Q_K_dims}, K_W.dtype(), false};
@@ -88,6 +89,7 @@ void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor
         }
 
         // std::cout<<"\n"<<"V grads: "<<V_grads_T<<"\n";
+        Eigen::array<std::size_t, 2> breduction_axis {0, 1};
         auto V_grads_map {V_grads_T_map.shuffle(shuffling_dims)};
         if (V_W.need_grads()) {
             Tensor temp {inp.shape(), Dtype::float32, false};
@@ -98,6 +100,11 @@ void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor
 
             forge_eval(V_W_grads_map, V_W_grads_map+temp_map.contract(
              V_grads_map, contract_dims_3).shuffle(shuff_dims));
+            if (V_bias.size()!=0) {
+                Eigen::array<std::size_t, 3> new_shape {1, 1, V_dims};
+                auto V_bias_grads {V_bias.gradients().as_eigen<grads_t, 3>()};
+                forge_eval(V_bias_grads, V_bias_grads+(V_grads_map.sum(breduction_axis).reshape(new_shape)));
+            }
         }
 
         if (inp.need_grads()) {
@@ -152,6 +159,11 @@ void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor
 
              forge_eval(Q_W_grads_map, Q_W_grads_map + inp_shuff_map.contract (
              Q_K_grads_map, contract_dims_7));
+             if (Q_bias.size()!=0) {
+                 Eigen::array<std::size_t, 3> new_shape {1, 1, Q_K_dims};
+                 auto Q_bias_map {Q_bias.gradients().as_eigen<grads_t, 3>()};
+                 forge_eval(Q_bias_map, Q_bias_map+Q_K_grads_map.sum(breduction_axis).reshape(new_shape));
+             }
          }
 
         Q_K_grads_map.setConstant(0.f);
@@ -185,7 +197,14 @@ void Forge::SelfAttentionGradsCPU::compute_grads(const Tensor &inp, const Tensor
 
              forge_eval(K_W_grads, K_W_grads + inp_shuff_map.contract (
                 Q_K_grads_map, contract_dims_7));
-            }
+             if (K_bias.size()!=0) {
+                 Eigen::array<std::size_t, 3> new_shape {1, 1, Q_K_dims};
+                 auto K_bias_map {K_bias.gradients().as_eigen<grads_t, 3>()};
+                 forge_eval(K_bias_map, K_bias_map+Q_K_grads_map.sum(breduction_axis).reshape(new_shape));
+             }
+         }
+        auto ue = std::chrono::steady_clock::now();
+        std::cout<<"\bAttn Backpass: "<<ue-us<<"\n";
     });
 }
 
