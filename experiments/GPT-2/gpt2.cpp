@@ -1,6 +1,12 @@
 #include "../../include/Forge.h"
 using namespace Forge;
 
+auto encode(const std::string& str, const SimpleTokenizer& tk) {
+    return tk.encode(str, [](std::string& c) {
+        std::string replace_with {"Ġ"};
+        if (c[0]==' ') c=c.replace(0, 1, replace_with);
+    });
+}
 
 void transpose(Tensor& A, Tensor& B, const std::vector<int>& perm) {
     if (A.shape().size() != B.shape().size()) throw std::invalid_argument("Different shapes");
