@@ -168,8 +168,12 @@ int main() {
 
     SimpleTokenizer tk {SimpleTokenizer::Type::BPE};
     //change the path where ur gpt2MergeRules.tk is located
-    tk.load(R"(Loadable\gpt2MergeRules.tk)");
+    tk.load(R"(C:\Users\MSI\CLionProjects\Forge\tests\Loadable\gpt2MergeRules.tk)");
     tk.fill_reverse();
+
+    GPT2 gpt2;
+    load_gpt2(gpt2.m_mem, R"(C:\Users\MSI\Downloads\model.safetensors)");
+    
 
     return 0;
 }
