@@ -36,6 +36,7 @@ private:
     static constexpr int INT_INF{ std::numeric_limits<int>::max() };
 
     std::map<std::string, int> m_ids;
+    std::map<int, std::string> m_ids_reverse;
     StringVec m_tokens;
     int m_vocabulary_size{};
     Type m_type;
@@ -58,7 +59,9 @@ public:
     [[nodiscard]] StringVec decode(const Forge::Tensor& token_ids) const;
     void save(const std::string& filename) const;
     void load(const std::string& filename);
+    void fill_reverse();
 
-    [[nodiscard]] auto getIds() const { return m_ids; }
+    [[nodiscard]] auto& getIds() { return m_ids; }
     [[nodiscard]] auto vocabularySize() const { return m_ids.size(); }
+    [[nodiscard]] auto& getIds_reverse() { return m_ids_reverse; }
 };

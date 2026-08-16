@@ -272,3 +272,5 @@ void SimpleTokenizer::load(const std::string& filename) {
 
 	file.close();
 }
+
+void SimpleTokenizer::fill_reverse() {for (auto& e : m_ids) m_ids_reverse[e.second] = e.first;}
