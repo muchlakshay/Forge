@@ -18,17 +18,20 @@ class Forge::Linear {
     bool m_using_bias;
     Dtype m_dtype;
     Device m_device;
+    bool m_need_grads{};
     inline static InstanceTracker m_tracker;
     int m_cnt {};
 public:
-    Linear(std::size_t input_size, std::size_t output_size, Initializers initializer=Initializers::xavier_normal,
-        Dtype dtype=Dtype::float32, Device device=Device::CPU, bool bias=true);
+    Linear(std::size_t input_size, std::size_t output_size, bool need_grads=true, bool bias=true,
+        Initializers initializer=Initializers::xavier_normal,
+        Dtype dtype=Dtype::float32, Device device=Device::CPU);
     Linear(){m_cnt=m_tracker.m_count; ++m_tracker.m_count;}
     Tensor operator()(const Tensor& input) const;
     auto parameters() {
         return std::vector{Parameter{&m_weights, true, std::format("lin.{}.w", m_cnt)},
             Parameter{&m_bias, false, std::format("lin.{}.b", m_cnt)}};
     }
+    void set_shape(std::size_t input_size, std::size_t output_size) {m_input_size = input_size; m_output_size = output_size;}
     [[nodiscard]] const auto& weights() const { return m_weights; }
     [[nodiscard]] const auto& bias() const { return m_bias; }
     [[nodiscard]] const auto& input_size() const { return m_input_size; }

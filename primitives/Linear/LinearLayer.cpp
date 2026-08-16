@@ -3,14 +3,14 @@
 #include "LinearGradsAbstract.h"
 #include "LinearAbstract.h"
 
-Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, Initializers initializer, Dtype dtype,
-Device device, bool bias)
+Forge::Linear::Linear(std::size_t input_size, std::size_t output_size, bool need_grads, bool bias, Initializers initializer, Dtype dtype,
+Device device)
 : m_dispatch_key{device==Device::CPU?DispatchKey::CPU:DispatchKey::CUDA}, m_input_size{input_size},
-m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}{
+m_output_size{output_size}, m_using_bias{bias}, m_dtype{dtype}, m_device{device}, m_need_grads{need_grads}{
     m_cnt = m_tracker.m_count;
     ++m_tracker.m_count;
-    m_weights = Tensor{{output_size, input_size}, dtype, true, device};
-    if (bias) m_bias = Tensor::Zeros({1, output_size}, true, dtype, device);
+    m_weights = Tensor{{output_size, input_size}, dtype, m_need_grads, device};
+    if (bias) m_bias = Tensor::Zeros({1, output_size}, m_need_grads, dtype, device);
     static const auto* weight_initializer {primitive_dispatcher().lookup<WeightsInitAbstract>(
        primitive_ops::weightsInit, DispatchKey::CPU)};
     weight_initializer->initialize(m_weights, initializer);
