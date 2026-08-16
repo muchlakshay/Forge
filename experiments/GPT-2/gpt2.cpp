@@ -180,7 +180,9 @@ int main() {
     static constexpr int MAX_GENERATIONS {100};
 
     Softmax softmax {};
-    std::string seed {"he went to the"};
+    std::string seed;
+    std::cout<<"Enter Seed: ";
+    std::getline(std::cin, seed);
 
     std::vector<int> ids;
     auto temp {encode(seed, tk)};
