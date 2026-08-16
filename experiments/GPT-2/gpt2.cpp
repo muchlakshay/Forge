@@ -2,11 +2,6 @@
 #include <filesystem>
 #include "get_GPT2_safetensors.h"
 
-#ifndef TEST_DATA_DIR
-#define TEST_DATA_DIR "./Loadable/"
-#endif
-
-
 using namespace Forge;
 
 int sample_top_k(Tensor& probs, int k) {
@@ -173,12 +168,10 @@ std::string clean_token(std::string tok) {
 int main() {
     global_exeCtx.set_threads(static_cast<int>(std::thread::hardware_concurrency()));
     Extra::download_GPT2_124M("./model.safetensors");
-
-    std::filesystem::path data_path {TEST_DATA_DIR};
-    std::filesystem::path merge_rules {data_path/"gpt2MergeRules.tk"};
+    Extra::donwload_GPT2_merge_rules("./gpt2MergeRules.tk");
 
     SimpleTokenizer tk {SimpleTokenizer::Type::BPE};
-    tk.load(merge_rules.string());
+    tk.load("./gpt2MergeRules.tk");
     tk.fill_reverse();
 
     GPT2 gpt2;
