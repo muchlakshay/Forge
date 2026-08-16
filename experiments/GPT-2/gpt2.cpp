@@ -1,4 +1,12 @@
-#include "../../include/Forge.h"
+#include "include/Forge.h"
+#include <filesystem>
+#include "get_GPT2_safetensors.h"
+
+#ifndef TEST_DATA_DIR
+#define TEST_DATA_DIR "./Loadable/"
+#endif
+
+
 using namespace Forge;
 
 int sample_top_k(Tensor& probs, int k) {
@@ -106,7 +114,6 @@ struct GPT2 {
 
 void load_gpt2(Members& mem, const std::string& filename) {
     auto gpt_state_dict {load_safetensors(filename)};
-
     mem.m_embed.all_embeddings() = gpt_state_dict["wte.weight"];
     mem.m_pe.m_pe = gpt_state_dict["wpe.weight"];
     mem.m_ln.gamma() = gpt_state_dict["ln_f.weight"];
@@ -165,19 +172,22 @@ std::string clean_token(std::string tok) {
 
 int main() {
     global_exeCtx.set_threads(static_cast<int>(std::thread::hardware_concurrency()));
+    Extra::download_GPT2_124M("./model.safetensors");
+
+    std::filesystem::path data_path {TEST_DATA_DIR};
+    std::filesystem::path merge_rules {data_path/"gpt2MergeRules.tk"};
 
     SimpleTokenizer tk {SimpleTokenizer::Type::BPE};
-    //change the path where ur gpt2MergeRules.tk is located
-    tk.load(R"(C:\Users\MSI\CLionProjects\Forge\experiments\GPT-2\Loadable\gpt2MergeRules.tk)");
+    tk.load(merge_rules.string());
     tk.fill_reverse();
 
     GPT2 gpt2;
-    load_gpt2(gpt2.m_mem, R"(C:\Users\MSI\Downloads\model.safetensors)");
+    load_gpt2(gpt2.m_mem, R"(./model.safetensors)");
 
     static constexpr int MAX_GENERATIONS {100};
 
     Softmax softmax {};
-    std::string seed {"its my first time"};
+    std::string seed {"he went to the"};
 
     std::vector<int> ids;
     auto temp {encode(seed, tk)};
