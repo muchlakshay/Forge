@@ -1,9 +1,9 @@
 /* change paths if you want to train it yourself!!
  * change path where to download MNIST dataset and then of the train/test files */
 
-#include "../../data/Extra/getMNIST.h"
+#include "getMNIST.h"
 #include "load_mnist.h"
-#include "../../Forge.h"
+#include "include/Forge.h"
 
 struct MLP {
     Forge::Linear layer_1{784, 16};
@@ -11,17 +11,7 @@ struct MLP {
     Forge::Linear layer_3{16, 10};
     Forge::Relu relu;
     auto operator()(const Forge::Tensor& input) const {return layer_3(relu(layer_2(relu(layer_1(input)))));}
-    auto parameters() {
-        Forge::Parameter l1_w {&layer_1.weights(), true};
-        Forge::Parameter l2_w {&layer_2.weights(), true};
-        Forge::Parameter l3_w {&layer_3.weights(), true};
-        Forge::Parameter l1_b {&layer_1.bias()};
-        Forge::Parameter l2_b {&layer_2.bias()};
-        Forge::Parameter l3_b {&layer_3.bias()};
-
-        std::vector params {l1_w, l2_w, l3_w, l1_b, l2_b, l3_b};
-        return params;
-    }
+    auto parameters() {return Forge::extract_parameters(*this);}
 };
 
 void downloadMNIST() {
@@ -34,7 +24,7 @@ void downloadMNIST() {
 
 int main() {
     downloadMNIST();
-    //change these paths according to where you downloaded MNIST
+    //change these paths to where you have downloaded the MNIST dataset
     auto train_img_path {"Data/train-images.idx3-ubyte"};
     auto train_lab_path {"Data/train-labels.idx1-ubyte"};
     auto test_img_path {"Data/t10k-images.idx3-ubyte"};
