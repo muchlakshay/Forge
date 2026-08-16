@@ -1,37 +1,13 @@
 #pragma once
 #include <cblas.h>
-#include "tensor.h"
-#include <iostream>
-#include <immintrin.h>
-#include <experimental/simd>
+#include <type_traits>
+#include <stdexcept>
 
 namespace Forge {
     template <typename DTYPE>
     void forge_contract(const DTYPE* A_ptr, const DTYPE* B_ptr, DTYPE* C, int M, int N, int K, bool transA,
-        bool transB, bool rowMajor, DTYPE alpha=1.0,  DTYPE beta=0.0);
-
-    struct ExeCTX {
-        int m_threads{static_cast<int>(std::thread::hardware_concurrency()/2)};
-        explicit ExeCTX(int threads) : m_threads(threads) {
-            openblas_set_num_threads(threads);
-            omp_set_num_threads(threads);
-        }
-        ExeCTX() = default;
-        ExeCTX(const ExeCTX&) = delete;
-        ExeCTX(ExeCTX&&) = delete;
-        ExeCTX& operator=(const ExeCTX&) = delete;
-        ExeCTX& operator=(ExeCTX&&) = delete;
-        void set_num_threads(int threads) {
-            m_threads = threads;
-            openblas_set_num_threads(threads);
-            omp_set_num_threads(threads);
-        }
-        [[nodiscard]] auto get_num_threads() const {return m_threads;}
-    };
-
-    inline ExeCTX forge_exeCTX;
+    bool transB, bool rowMajor, DTYPE alpha=1.0,  DTYPE beta=0.0);
 }
-
 
 template<typename DTYPE>
 void Forge::forge_contract(const DTYPE* A_ptr, const DTYPE* B_ptr, DTYPE* C, int M, int N, int K, bool transA,
@@ -60,5 +36,3 @@ void Forge::forge_contract(const DTYPE* A_ptr, const DTYPE* B_ptr, DTYPE* C, int
         throw std::runtime_error("Unsupported DTYPE For Contraction");
     }
 }
-
-
