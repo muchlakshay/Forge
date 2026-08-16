@@ -152,7 +152,7 @@ inline std::map<std::string, Forge::Tensor> Forge::load_safetensors(const std::s
         }
         state[entry.first] = data;
     }
-    return state;
+    return std::move(state);
 }
 
 template<typename T>
