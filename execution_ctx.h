@@ -30,6 +30,12 @@ namespace Forge {
 
     inline ExecutionCtx global_exeCtx;
 
+    inline float linear_time {};
+    inline float attention_time{};
+    inline float layernorm_time{};
+    inline float embedding_time{};
+    inline float broadcast_time{};
+    inline float gelu_time {};
 
 }
 
