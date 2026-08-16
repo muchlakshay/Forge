@@ -1,6 +1,40 @@
 #include "../../include/Forge.h"
 using namespace Forge;
 
+int sample_top_k(Tensor& probs, int k) {
+    auto* ptr {static_cast<float*>(probs.data())};
+    int vocab_size = probs.size();
+    std::vector<std::pair<int, float>> idx_probs;
+    for (int i{}; i<vocab_size; i++) idx_probs.emplace_back(i, ptr[i]);
+    std::sort(idx_probs.begin(), idx_probs.end(), [](const auto& a, const auto& b){return a.second > b.second;});
+
+    std::vector top_k_pool (idx_probs.begin(), idx_probs.begin()+k);
+    float sum {0.0f};
+    for (const auto& item : top_k_pool) sum += item.second;
+    for (auto& item : top_k_pool) item.second /= sum;
+
+    std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution dis(0.0f, 1.0f);
+    float random_value {dis(gen)};
+
+    float cumulative_sum {0.0f};
+    for (const auto& item : top_k_pool) {
+        cumulative_sum += item.second;
+        if (random_value <= cumulative_sum) return item.first;
+    }
+
+    return top_k_pool[0].first;
+
+}
+
+auto argmax(const Tensor& x) {
+    auto* ptr {static_cast<float*>(x.data())};
+    auto max_it {std::max_element(ptr, ptr+x.size())};
+    auto argmax {std::distance(ptr, max_it)};
+    return argmax;
+}
+
 auto encode(const std::string& str, const SimpleTokenizer& tk) {
     return tk.encode(str, [](std::string& c) {
         std::string replace_with {"Ġ"};
