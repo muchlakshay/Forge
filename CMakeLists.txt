@@ -94,7 +94,7 @@ target_include_directories(Forge
 if(MSVC)
     target_compile_options(Forge PUBLIC /arch:AVX2 /fp:fast /openmp)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(Forge PUBLIC -mavx2 -march=native -ffast-math -fopenmp)
+    target_compile_options(Forge PUBLIC -mavx2 -ffast-math -fopenmp)
     target_link_options(Forge PUBLIC $<$<CXX_COMPILER_ID:GNU,Clang>:-fopenmp>)
 endif()
 
