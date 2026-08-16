@@ -29,7 +29,7 @@ Forge::Tensor Forge::MSE::operator()(const Tensor &predictions, const Tensor &gr
 }
 
 Forge::Tensor Forge::CrossEntropy::operator()(const Tensor &predictions, const Tensor &ground_truth) {
-    check_device_dtype_shape(predictions, ground_truth);
+    // check_device_dtype_shape(predictions, ground_truth);
 
     auto dispatch_key {predictions.dispatch_key()};
     auto device {predictions.device()};
