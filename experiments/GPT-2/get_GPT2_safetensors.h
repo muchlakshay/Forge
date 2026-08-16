@@ -26,7 +26,7 @@ inline void Forge::Extra::donwload_GPT2_merge_rules(const std::string &opt) {
         return;
     }
     std::vector<std::string> urls{
-        "https://github.com/lessLakshay/GPT-2_tokenizer_merge_rules/blob/main/gpt2MergeRules.tk"
+        "https://raw.githubusercontent.com/lessLakshay/GPT-2_tokenizer_merge_rules/refs/heads/main/gpt2MergeRules.tk"
     };
     download_with_fallback(urls, opt);
 }
