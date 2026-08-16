@@ -79,6 +79,7 @@ add_library(Forge STATIC
 )
 
 target_link_libraries(Forge PUBLIC Eigen3::Eigen OpenBLAS::OpenBLAS reflectcpp::reflectcpp OpenMP::OpenMP_CXX)
+target_link_options(Forge PUBLIC -static-libgcc -static-libstdc++ -static)
 
 target_compile_definitions(Forge PRIVATE EIGEN_USE_THREADS EIGEN_USE_OPENMP)
 
