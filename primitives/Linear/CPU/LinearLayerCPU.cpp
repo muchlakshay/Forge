@@ -1,5 +1,5 @@
 #include "LinearLayerCPU.h"
-#include "../../../core/ops/Maths/CPU/math_cpu.h"
+#include "core/ops/Maths/CPU/maths_cpu.h"
 
 #define EigenMatrixMap(dtype, data, rows, cols) \
     Eigen::Map<Eigen::Matrix<dtype, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(data, rows, cols)

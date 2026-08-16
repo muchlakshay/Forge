@@ -3,7 +3,7 @@
 #include "Attention/Self Attention/self_attention_grads_abstract.h"
 #include "autograd/attach_node.h"
 #include "Linear/LinearLayer.h"
-#include "../../../../core/ops/Maths/CPU/math_cpu.h"
+#include "core/ops/Maths/CPU/maths_cpu.h"
 
 template<typename T>
 concept isSubscriptable = requires (T a) {a[0];a.size();};

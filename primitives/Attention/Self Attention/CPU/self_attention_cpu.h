@@ -1,3 +1,4 @@
+#pragma once
 #include "Attention/Self Attention/self_attention_impl_abstract.h"
 
 namespace Forge {
