@@ -164,5 +164,12 @@ std::string clean_token(std::string tok) {
 }
 
 int main() {
+    global_exeCtx.set_threads(static_cast<int>(std::thread::hardware_concurrency()));
+
+    SimpleTokenizer tk {SimpleTokenizer::Type::BPE};
+    //change the path where ur gpt2MergeRules.tk is located
+    tk.load(R"(Loadable\gpt2MergeRules.tk)");
+    tk.fill_reverse();
+
     return 0;
 }
