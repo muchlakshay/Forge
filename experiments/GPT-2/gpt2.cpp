@@ -120,6 +120,15 @@ void load_gpt2(Members& mem, const std::string& filename) {
 
 }
 
+std::string clean_token(std::string tok) {
+    size_t pos;
+    while ((pos = tok.find("Ġ")) != std::string::npos) tok.replace(pos, 2, " ");
+    while ((pos = tok.find("Ċ")) != std::string::npos) tok.replace(pos, 2, "\n");
+    while ((pos = tok.find("ĉ")) != std::string::npos) tok.replace(pos, 2, "\t");
+    while ((pos = tok.find("Âł")) != std::string::npos) tok.replace(pos, 4, "\u00a0");
+    return tok;
+}
+
 int main() {
     return 0;
 }
