@@ -11,9 +11,9 @@ void Forge::MemoryPoolCPU::RadixTree::destroy_node(RadixNode* node, int level) {
 }
 
 void* Forge::MemoryPoolCPU::allocate(std::size_t size) {
-    if (size<Forge::MemoryPoolCPU::Bin::ALIGNMENT) size = Forge::MemoryPoolCPU::Bin::ALIGNMENT;
+    if (size<Bin::ALIGNMENT) size = Bin::ALIGNMENT;
     else size = std::bit_ceil(size);
-    constexpr auto chunk_size {Forge::MemoryPoolCPU::Bin::CHUNK_SIZE};
+    constexpr auto chunk_size {Bin::CHUNK_SIZE};
 
     const auto bin_idx {std::countr_zero(size)};
     auto& bin {m_bins[bin_idx]};
@@ -32,10 +32,10 @@ void* Forge::MemoryPoolCPU::allocate(std::size_t size) {
     return bin->allocate();
 }
 
-void Forge::MemoryPoolCPU::RadixTree::radix_insert(void *ptr, Forge::MemoryPoolCPU::Bin* bin_ptr) {
+void Forge::MemoryPoolCPU::RadixTree::radix_insert(void *ptr, Bin* bin_ptr) {
 
     const auto addr {reinterpret_cast<std::uintptr_t>(ptr)};
-    constexpr std::size_t OFFSET {std::countr_zero(MemoryPoolCPU::Bin::CHUNK_SIZE)};
+    constexpr std::size_t OFFSET {std::countr_zero(Bin::CHUNK_SIZE)};
     constexpr auto indexing_bits{Forge::MemoryPoolCPU::INDEXING_BITS};
     constexpr auto MASK {(1ULL<<indexing_bits)-1};
 
@@ -59,8 +59,8 @@ void Forge::MemoryPoolCPU::RadixTree::radix_insert(void *ptr, Forge::MemoryPoolC
 
 Forge::MemoryPoolCPU::Bin* Forge::MemoryPoolCPU::RadixTree::radix_lookup(void *ptr) const {
     const auto addr {reinterpret_cast<std::uintptr_t>(ptr)};
-    constexpr auto indexing_bits {Forge::MemoryPoolCPU::INDEXING_BITS};
-    constexpr std::size_t OFFSET {std::countr_zero(MemoryPoolCPU::Bin::CHUNK_SIZE)};
+    constexpr auto indexing_bits {INDEXING_BITS};
+    constexpr std::size_t OFFSET {std::countr_zero(Bin::CHUNK_SIZE)};
     constexpr auto MASK {(1ULL<<indexing_bits)-1};
 
     const auto idx {addr>>OFFSET};

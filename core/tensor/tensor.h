@@ -4,6 +4,7 @@
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"
 #include "autograd/node_abstract.h"
+#include "execution_ctx.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
@@ -59,9 +60,9 @@ class Forge::Tensor {
     void initialize(const std::initializer_list<U>& init_list);
 public:
     Tensor() = default;
-    explicit Tensor(const std::vector<std::size_t>& shape, Forge::Dtype dtype = Forge::Dtype::float32, bool need_grads = true,
-        Forge::Device device = Forge::Device::CPU);
-    Tensor(const Tensor& another, struct NodeContext);
+    explicit Tensor(const std::vector<std::size_t>& shape, Dtype dtype = Dtype::float32, bool need_grads = true,
+        Device device = Device::CPU);
+    Tensor(const Tensor& another, NodeContext);
     Tensor(const Tensor& another);
     Tensor(Tensor&& another) = default;
     Tensor& operator=(const Tensor& another);
@@ -98,9 +99,11 @@ public:
     static Tensor FromHostPtr(T* host_ptr, const std::vector<std::size_t>& shape, bool need_grads=true);
     template <typename T>
     static Tensor Range(T start, T end, T step=1, bool need_grads=true, Device device=Device::CPU);
-    static Tensor Random();
+    static Tensor Random(const std::vector<std::size_t>& shape, Dtype=Dtype::float32,
+        Initializers initializer=Initializers::xavier_normal, Device device=Device::CPU, bool need_grads=true);
 
     void copy(const Tensor& another);
+    Tensor BroadcastAdd(const Tensor& another, const std::vector<int>& bcast_dims={1, 1, 1, 1});
 
     [[nodiscard]] const auto& need_grads() const {return m_need_grads;} ;
     [[nodiscard]] const auto& shape() const {return m_shape;}
@@ -134,10 +137,11 @@ template <TensorStorageType T>
 constexpr Forge::Dtype Forge::dtype_of() {
     if constexpr (std::is_same_v<T, std::int16_t>) return Dtype::int16;
     else if constexpr (std::is_same_v<T, std::int32_t>) return Dtype::int32;
-    else if constexpr (std::is_same_v<T, std::int64_t>) return Dtype::int64;
+    else if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, long long>) return Dtype::int64;
     else if constexpr (std::is_same_v<T, Eigen::half>) return Dtype::float16;
     else if constexpr (std::is_same_v<T, float>) return Dtype::float32;
     else if constexpr (std::is_same_v<T, double>) return Dtype::float64;
+    else if constexpr (std::is_same_v<T, native_fp16_t>) return Dtype::float16;
     else static_assert(dependent_false_v<T>, " Unsupported tensor storage type for dtype_of()");
 }
 
@@ -184,7 +188,7 @@ Forge::Tensor Forge::Tensor::FromHostPtr(T *host_ptr, const std::vector<std::siz
         tensor.m_strides[i] = size;
         size*=tensor.m_shape[i];
     }
-    tensor.m_size = size; tensor.m_dtype = dtype_of<T>(); tensor.m_need_grads = need_grads;
+    tensor.m_size = size; tensor.m_dtype = dtype_of<std::remove_cvref_t<T>>(); tensor.m_need_grads = need_grads;
     tensor.m_storage = std::make_shared<StorageCPU<T>>(host_ptr, 0, size);
     return tensor;
 }
@@ -269,5 +273,13 @@ void Forge::Tensor::setConstant(T constant) {
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
     const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
+    return os;
+}
+
+template <typename  T>
+ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+    std::cout<<"[";
+    for (auto& e : vec) std::cout<<e<<(&e!=&vec.back()?", ":"");
+    std::cout<<"]"<<std::endl;
     return os;
 }

@@ -4,9 +4,12 @@
 #include "autograd/attach_node.h"
 #include "Dispatcher/primitive_dispatcher.h"
 
-Forge::LayerNorm::LayerNorm(std::size_t d_model, const Dtype dtype, const Device &device, const bool need_grads) :
+Forge::LayerNorm::LayerNorm(std::size_t d_model, const bool need_grads, const Dtype dtype, const Device &device) :
     m_gamma{Tensor::Ones({d_model}, need_grads, dtype, device)}, m_beta{Tensor::Zeros({d_model}, need_grads, dtype, device)},
-    m_d_model{d_model}, m_device{device}, m_dtype{dtype}, m_need_grads{need_grads} {}
+    m_d_model{d_model}, m_device{device}, m_dtype{dtype}, m_need_grads{need_grads} {
+    if (dtype==Dtype::int32) throw std::runtime_error("Dtype cant be int32");
+    m_cnt=m_tracker.m_count; ++m_tracker.m_count;
+}
 
 Forge::Tensor Forge::LayerNorm::operator()(const Tensor &input) {
     if (input.shape().back() != m_d_model) throw std::invalid_argument(std::format("Input's d_model is not {}", m_d_model));
@@ -15,7 +18,10 @@ Forge::Tensor Forge::LayerNorm::operator()(const Tensor &input) {
     Tensor opt{input.shape(), dtype(), m_need_grads || input.need_grads(), m_device};
 
     const auto* impl {primitive_dispatcher().lookup<LayerNormImplAbstract>(primitive_ops::LayerNorm, input.dispatch_key())};
+    auto start = std::chrono::steady_clock::now();
     impl->forward(input, m_gamma, m_beta, opt);
+    auto end = std::chrono::steady_clock::now();
+    layernorm_time+=std::chrono::duration<float>{end - start}.count();
 
     if (input.need_grads() || gamma().need_grads() || beta().need_grads()) {
         attach_node<LayerNormGradsAbstract, 3>(opt, m_device, primitive_dispatcher(), primitive_ops::LayerNorm,

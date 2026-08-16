@@ -27,6 +27,7 @@ void Forge::LayerNormImplCPU::forward(const Tensor &input, const Tensor &gamma, 
         auto normalized {inp_sub_mean * rstd.broadcast(bcast_dims)};
 
         Eigen::array<Eigen::Index, 3> bcast_dims_ {batch, seq_len, 1};
-        opt_map = gamma_map.broadcast(bcast_dims_) * normalized + beta_map.broadcast(bcast_dims_);
+
+        forge_eval(opt_map, gamma_map.broadcast(bcast_dims_) * normalized + beta_map.broadcast(bcast_dims_));
     });
 }

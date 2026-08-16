@@ -1,18 +1,19 @@
 #include "weights_init_cpu.h"
 
-void Forge::WeightsInitCPU::initialize(Tensor& weights, const std::vector<std::size_t>& dims,
-                                       Initializers initializer) const {
+void Forge::WeightsInitCPU::initialize(Tensor& weights, Initializers initializer) const {
     std::random_device device;
     std::mt19937_64 mt{ device() };
+    auto dims {weights.shape()};
+    auto d_size {dims.size()};
     auto cols {dims.back()};
-    auto rows {dims[dims.size() - 2]};
+    auto rows {d_size>=2?dims[d_size - 2]:1};
 
     auto fill {
-        [&](auto& storage, auto& dist) {
+        [&](auto& W, auto& dist) {
             DISPATCH_ALL_TYPES(weights.dtype(), Device::CPU,
                 [&] {
-                    auto* casted_ptr {static_cast<scalar_t*>(weights.data())};
-                    for (std::size_t i {}; i<weights.size(); ++i)
+                    auto* casted_ptr {static_cast<scalar_t*>(W.data())};
+                    for (std::size_t i {}; i<W.size(); ++i)
                         casted_ptr[i] = static_cast<scalar_t>(dist(mt));
                 });}
     };

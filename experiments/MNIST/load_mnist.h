@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 #include <stdexcept>
-#include "../../Forge.h"
+#include "../../include/Forge.h"
 
 static uint32_t read_uint32(std::ifstream& f) {
     uint32_t val;

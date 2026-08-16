@@ -47,7 +47,7 @@ class Forge::MemoryPoolCPU : public Forge::MemoryPoolAbstract {
 
         friend MemoryPoolCPU;
     public:
-        static constexpr std::size_t CHUNK_SIZE {64*1024}, ALIGNMENT{64};
+        static constexpr std::size_t CHUNK_SIZE {64*1024}, ALIGNMENT{32};
         explicit Bin(std::size_t class_size, std::size_t chunks);
         Bin(const Bin&) = delete;
         Bin& operator=(const Bin&) = delete;
