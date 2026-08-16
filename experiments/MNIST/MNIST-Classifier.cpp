@@ -43,7 +43,7 @@ int main() {
     Forge::Adam optimizer{mlp.parameters(), 0.001f};
     optimizer.setDecayFactor(0.02f);
 
-    int epochs {1};
+    int epochs {50};
     for (int epoch{1}; epoch <= epochs; ++epoch) {
         float batch_loss {};
         for (int batch{}; batch<images.shape()[0]; ++batch) {
