@@ -4,7 +4,7 @@
 #include "autograd/attach_node.h"
 #include "Dispatcher/primitive_dispatcher.h"
 
-Forge::LayerNorm::LayerNorm(std::size_t d_model, const Dtype dtype, const Device &device, const bool need_grads) :
+Forge::LayerNorm::LayerNorm(std::size_t d_model, const bool need_grads, const Dtype dtype, const Device &device) :
     m_gamma{Tensor::Ones({d_model}, need_grads, dtype, device)}, m_beta{Tensor::Zeros({d_model}, need_grads, dtype, device)},
     m_d_model{d_model}, m_device{device}, m_dtype{dtype}, m_need_grads{need_grads} {m_cnt=m_tracker.m_count; ++m_tracker.m_count;}
 

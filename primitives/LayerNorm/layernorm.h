@@ -17,7 +17,7 @@ class Forge::LayerNorm {
     inline static InstanceTracker m_tracker;
     int m_cnt {};
 public:
-    LayerNorm(const std::size_t d_model, const Dtype dtype, const Device& device, bool need_grads=true);
+    LayerNorm(const std::size_t d_model, bool need_grads=true, Dtype dtype=Dtype::float32, const Device& device=Device::CPU);
     LayerNorm() {m_cnt=m_tracker.m_count; ++m_tracker.m_count;}
     Tensor operator()(const Tensor& input);
     auto& gamma() {return m_gamma;}
