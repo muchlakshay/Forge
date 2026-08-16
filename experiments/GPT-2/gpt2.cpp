@@ -1,10 +1,15 @@
 #include "../../include/Forge.h"
-#include "ops/Maths/CPU/transpose.h"
-#include <windows.h>
 using namespace Forge;
+
+
+void transpose(Tensor& A, Tensor& B, const std::vector<int>& perm) {
+    if (A.shape().size() != B.shape().size()) throw std::invalid_argument("Different shapes");
+    forge_transpose_AVX2<float>(static_cast<float*>(A.data()),
+        static_cast<float*>(B.data()), A.strides(), A.shape(), perm, A.size());
+}
+
 static constexpr std::size_t D_MODEL{768}, QK_DIMS{64}, V_DIMS{64};
 static constexpr std::size_t HEADS{12}, VOCAB_SIZE{50257}, MAX_SEQ_LEN{1024};
-
 
 struct TransformerBlock {
     LayerNorm m_ln1{D_MODEL, false};
@@ -58,6 +63,56 @@ struct GPT2 {
         return opt;
     }
 };
+
+void load_gpt2(Members& mem, const std::string& filename) {
+    auto gpt_state_dict {load_safetensors(filename)};
+
+    mem.m_embed.all_embeddings() = gpt_state_dict["wte.weight"];
+    mem.m_pe.m_pe = gpt_state_dict["wpe.weight"];
+    mem.m_ln.gamma() = gpt_state_dict["ln_f.weight"];
+    mem.m_ln.beta() = gpt_state_dict["ln_f.bias"];
+    mem.m_l_opt.weights() = gpt_state_dict["wte.weight"];
+    mem.m_l_opt.set_shape(D_MODEL, VOCAB_SIZE);
+
+    for (int i {}; i<12; ++i) {
+        auto& block {mem.m_blocks[i]};
+        block.m_ln1.gamma() = gpt_state_dict[std::format("h.{}.ln_1.weight", i)];
+        block.m_ln1.beta() = gpt_state_dict[std::format("h.{}.ln_1.bias", i)];
+        block.m_ln2.gamma() = gpt_state_dict[std::format("h.{}.ln_2.weight", i)];
+        block.m_ln2.beta() = gpt_state_dict[std::format("h.{}.ln_2.bias", i)];
+
+        transpose(gpt_state_dict[std::format("h.{}.mlp.c_fc.weight", i)], block.m_l1.weights(), {1, 0});
+        block.m_l1.bias() = gpt_state_dict[std::format("h.{}.mlp.c_fc.bias", i)];
+
+        transpose(gpt_state_dict[std::format("h.{}.mlp.c_proj.weight", i)], block.m_l2.weights(), {1, 0});
+        block.m_l2.bias() = gpt_state_dict[std::format("h.{}.mlp.c_proj.bias", i)];
+
+        auto& attn_w {gpt_state_dict[std::format("h.{}.attn.c_attn.weight", i)]};
+        // std::cout<<attn_w<<"\n";
+        Tensor qkv_t {{D_MODEL*3, D_MODEL}, Dtype::float32, false};
+        transpose(attn_w, qkv_t, {1, 0});
+
+        std::size_t component_size {D_MODEL*D_MODEL};
+
+        auto* ptr {static_cast<float*>(qkv_t.data())};
+        auto qw {Tensor::FromHostPtr(ptr, {12, 64, 768}, false).clone()};
+        auto kw {Tensor::FromHostPtr(ptr+component_size, {12, 64, 768}, false).clone()};
+        auto vw {Tensor::FromHostPtr(ptr+2*component_size, {12, 64, 768}, false).clone()};
+
+        transpose(qw,block.m_attn1.query(), {0, 2, 1});
+        transpose(kw,block.m_attn1.key(), {0, 2, 1});
+        transpose(vw,block.m_attn1.value(), {0, 2, 1});
+
+        auto* bptr {static_cast<float*>(gpt_state_dict[std::format("h.{}.attn.c_attn.bias", i)].data())};
+        block.m_attn1.query_bias() = Tensor::FromHostPtr(bptr, {HEADS, QK_DIMS}, false).clone();
+        block.m_attn1.key_bias() = Tensor::FromHostPtr(bptr+D_MODEL, {HEADS, QK_DIMS}, false).clone();
+        block.m_attn1.value_bias() = Tensor::FromHostPtr(bptr+2*D_MODEL, {HEADS, QK_DIMS}, false).clone();
+
+        transpose(gpt_state_dict[std::format("h.{}.attn.c_proj.weight", i)], block.m_attn1.linear().weights(), {1, 0});
+        block.m_attn1.linear().bias() = gpt_state_dict[std::format("h.{}.attn.c_proj.bias", i)];
+    }
+
+}
 
 int main() {
     return 0;
