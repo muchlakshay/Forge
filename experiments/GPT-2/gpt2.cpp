@@ -168,12 +168,32 @@ int main() {
 
     SimpleTokenizer tk {SimpleTokenizer::Type::BPE};
     //change the path where ur gpt2MergeRules.tk is located
-    tk.load(R"(C:\Users\MSI\CLionProjects\Forge\tests\Loadable\gpt2MergeRules.tk)");
+    tk.load(R"(C:\Users\MSI\CLionProjects\Forge\experiments\GPT-2\Loadable\gpt2MergeRules.tk)");
     tk.fill_reverse();
 
     GPT2 gpt2;
     load_gpt2(gpt2.m_mem, R"(C:\Users\MSI\Downloads\model.safetensors)");
-    
+
+    static constexpr int MAX_GENERATIONS {100};
+
+    Softmax softmax {};
+    std::string seed {"its my first time"};
+
+    std::vector<int> ids;
+    auto temp {encode(seed, tk)};
+    auto ptr {static_cast<int*>(temp.data())};
+    for (std::size_t i{}; i<temp.size(); i++) ids.push_back(ptr[i]);
+
+    std::cout<<seed;
+
+    for (int i{}; i<MAX_GENERATIONS; ++i) {
+        auto ids_t {Tensor::FromHostPtr(ids.data(), {ids.size()}, false)};
+        auto opt {gpt2(ids_t)};
+        auto pred {softmax(opt[ids_t.size()-1])};
+        auto tok {sample_top_k(pred, 50)};
+        ids.push_back(tok);
+        std::cout<<clean_token(tk.getIds_reverse()[tok]);
+    }
 
     return 0;
 }
