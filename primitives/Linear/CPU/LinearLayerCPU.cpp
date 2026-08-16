@@ -33,16 +33,21 @@ void Forge::LinearCPU::forward(const Tensor& input, const Tensor& output, const 
         //     contraction_dims).reshape(output_map.dimensions()));
 
         if (using_bias) {
+            // auto weights_map { weights.as_eigen<scalar_t>()};
+            // auto input_map   { input.as_eigen<scalar_t>()  };
             auto output_map  { output.as_eigen<scalar_t>() };
             auto bias_map    { bias.as_eigen<scalar_t>() };
             auto odims {output_map.dimensions()};
 
-            assert(bias_map.dimension(0) == 1 && bias_map.dimension(1) == 1 &&
-                bias_map.dimension(2) == 1 && "bias must be (1,1,1,output_size)");
+            // assert(bias_map.dimension(0) == 1 && bias_map.dimension(1) == 1 &&
+            //     bias_map.dimension(2) == 1 && "bias must be (1,1,1,output_size)");
+            //
+            // Eigen::array<Eigen::Index , 4> broadcast_dims {odims[0], odims[1], odims[2], 1};
+            //
+            // forge_eval(output_map, output_map+bias_map.broadcast(broadcast_dims));
 
-            Eigen::array<Eigen::Index , 4> broadcast_dims {odims[0], odims[1], odims[2], 1};
-
-            forge_eval(output_map, output_map+bias_map.broadcast(broadcast_dims));
+            broadcastADD_AVX2(output_map.data(), bias_map.data(), output_map.data(), (std::size_t)odims[0]*odims[1]*odims[2],
+                (std::size_t)odims[3]);
         }
     });
 }
