@@ -9,7 +9,7 @@
 #include "../Activations/activations.h"
 #include "../Loss Functions/CPU/lossFunctionsCPU.h"
 #include "../Loss Functions/lossFunctions.h"
-#include "../loss Functions/CPU/lossFunctionsGradsCPU.h"
+#include "../Loss Functions/CPU/lossFunctionsGradsCPU.h"
 #include "../Optimizers/CPU/optimizersUpdateCPU.h"
 #include "../Optimizers/optimizers.h"
 #include "../Attention/Self Attention/self_attention.h"
