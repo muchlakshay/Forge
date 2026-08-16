@@ -135,13 +135,17 @@ public:
 
 template <TensorStorageType T>
 constexpr Forge::Dtype Forge::dtype_of() {
-    if constexpr (std::is_same_v<T, std::int16_t>) return Dtype::int16;
-    else if constexpr (std::is_same_v<T, std::int32_t>) return Dtype::int32;
-    else if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, long long>) return Dtype::int64;
-    else if constexpr (std::is_same_v<T, Eigen::half>) return Dtype::float16;
+    // if constexpr (std::is_same_v<T, std::int16_t>) return Dtype::int16;
+    // else if constexpr (std::is_same_v<T, std::int32_t>) return Dtype::int32;
+    // else if constexpr (std::is_same_v<T, std::int64_t> || std::is_same_v<T, long long>) return Dtype::int64;
+    // else if constexpr (std::is_same_v<T, Eigen::half>) return Dtype::float16;
+    // else if constexpr (std::is_same_v<T, float>) return Dtype::float32;
+    // else if constexpr (std::is_same_v<T, double>) return Dtype::float64;
+    // else if constexpr (std::is_same_v<T, native_fp16_t>) return Dtype::float16;
+    // else static_assert(dependent_false_v<T>, " Unsupported tensor storage type for dtype_of()");
+
+    if constexpr (std::is_same_v<T, std::int32_t>) return Dtype::int32;
     else if constexpr (std::is_same_v<T, float>) return Dtype::float32;
-    else if constexpr (std::is_same_v<T, double>) return Dtype::float64;
-    else if constexpr (std::is_same_v<T, native_fp16_t>) return Dtype::float16;
     else static_assert(dependent_false_v<T>, " Unsupported tensor storage type for dtype_of()");
 }
 
