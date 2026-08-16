@@ -4,6 +4,7 @@
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"
 #include "autograd/node_abstract.h"
+#include "execution_ctx.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
@@ -140,6 +141,7 @@ constexpr Forge::Dtype Forge::dtype_of() {
     else if constexpr (std::is_same_v<T, Eigen::half>) return Dtype::float16;
     else if constexpr (std::is_same_v<T, float>) return Dtype::float32;
     else if constexpr (std::is_same_v<T, double>) return Dtype::float64;
+    else if constexpr (std::is_same_v<T, native_fp16_t>) return Dtype::float16;
     else static_assert(dependent_false_v<T>, " Unsupported tensor storage type for dtype_of()");
 }
 
@@ -271,5 +273,13 @@ void Forge::Tensor::setConstant(T constant) {
 inline std::ostream& operator<<(std::ostream& os, const Forge::Tensor& tensor) {
     const auto* print {Forge::Tensor::dispatcher().lookup<Forge::PrintAbstract>(Forge::UtilityOps::print, tensor.dispatch_key())};
     print->print(tensor.data(), tensor.shape(), tensor.strides(), tensor.dtype(), os);
+    return os;
+}
+
+template <typename  T>
+ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
+    std::cout<<"[";
+    for (auto& e : vec) std::cout<<e<<(&e!=&vec.back()?", ":"");
+    std::cout<<"]"<<std::endl;
     return os;
 }
