@@ -1217,3 +1217,67 @@ StringVec tokens  = tok.decode(ids);           // -> token strings, one per ID
   preprocess each pre-tokenized chunk (e.g. lowercasing) before BPE merges
   are applied.
 
+## Reflection-Based Parameters & Model Load/Save (safetensors)
+
+Forge uses [reflect-cpp](https://github.com/getml/reflect-cpp) to automatically
+discover a model's trainable parameters from its struct layout, with no manual
+registration required - any member exposing a `parameters()` method is picked
+up automatically, including nested submodules.
+
+### Defining a model
+
+Any aggregate struct whose members expose `parameters() -> std::vector<Parameter>`
+(e.g. `Linear`, `Embedding`, `LayerNorm`) is automatically reflectable:
+
+```cpp
+struct GPT2Block {
+    Forge::SelfAttention attn;
+    Forge::LayerNorm ln1;
+    Forge::Linear    mlp_fc;
+    Forge::LayerNorm ln2;
+};
+```
+
+No base class, no manual parameter registration - `rfl::to_view` introspects
+the struct's members directly.
+
+### Extracting parameters for an optimizer
+
+```cpp
+auto params = Forge::extract_parameters(model);   // flat std::vector<Parameter>
+Forge::Adam optimizer(params, /*lr=*/...);
+```
+
+Walks every member satisfying the `HasParameters` concept and collects their
+`Parameter`s into one flat list - this is what feeds the optimizer without
+you having to hand-list every layer's weights.
+
+### Saving weights
+
+```cpp
+Forge::save(model, "weights.safetensors");
+```
+
+Writes an actual [safetensors](https://github.com/huggingface/safetensors)-format
+file: an 8-byte header length, a JSON header describing each tensor's dtype,
+shape, and byte offset (padded to an 8-byte boundary), followed by the raw
+tensor data. Parameter names are built as `<member_name>.<param_name>`
+(recursing into nested submodules via `get_state_dict`), matching the naming
+convention each layer's own `parameters()` already establishes.
+
+### Loading weights
+
+```cpp
+Forge::load(model, "weights.safetensors");
+```
+
+Reads the file, matches tensor names against the model's own state dict, and
+copies loaded data directly into each parameter in place. Throws if the
+number of tensors doesn't match the model's parameter count - a basic
+architecture-mismatch guard. This is the mechanism used to load real GPT-2
+weights directly into Forge's GPT-2 implementation.
+
+`Forge::load_safetensors(filename)` is also available standalone, returning
+a raw `std::map<std::string, Tensor>` without requiring a matching model
+struct - useful for inspecting a checkpoint's contents directly.
+
