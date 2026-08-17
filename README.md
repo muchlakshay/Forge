@@ -1,7 +1,5 @@
 # Forge: A Deep Learning Framework from Scratch
 
-**Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on first principal building approach and educational clarity.
-
 - [Overview](#overview)
 - [Installation](#installation)
 - [Tensor](#tensor-documentation)
@@ -40,10 +38,19 @@
   - [Adaptive Moment Estimation (Adam)](#forgeadam)
 - [LayerNorm](#layernorm)
 - [Self-Attention](#self-attention)
+- [Embeddings](#embeddings)
+- [Tokenizer](#tokenizer)
+- [Parameters extraction & Model Load/Save (safetensors)](#reflection-based-parameters-&-model-load-save-safetensors)
 
 ## Overview
 
-Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for performance and simplicity, making it suitable for both learning and production use cases.
+Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for simplicity, making it suitable for learning use cases.
+
+Most people learn deep learning by calling `model.fit()` and trusting PyTorch got the internals right. I wanted to know *why* it's right - how a tensor actually sits in memory, why GEMM dominates a forward pass, why attention needs a causal mask and what breaks silently if you get a transpose wrong.
+
+So Forge is a deep learning framework built from scratch. Every primitive here - Linear, LayerNorm, SelfAttention, Optimizers, and some of the the AVX2 kernels underneath - exists because I wrote it myself and verified it against a real reference.
+
+The proof: Forge's GPT-2, loaded with real pretrained weights, matches Hugging Face's `transformers` **token-for-token** under greedy decoding. Not close - exact. That's what convinces me this actually taught me how modern AI works, not just how to produce something that looks like it does.
 
 ## Installation
 
