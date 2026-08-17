@@ -145,6 +145,13 @@ for the `gpt2`/`mnist` executables via a post-build copy step on Windows -
 if you're linking your own executable against `Forge` outside that setup,
 you'll need to do this step yourself.
 
+### Tested Platforms
+
+| Platform | Arch  | Tested OS Version              | Most Thoroughly Tested |
+|----------|-------|----------------------------------|:-----------------------:|
+| Windows  | x64   | Windows 11 Pro version 25H2         | yes                      |
+| Linux    | x64   | Ubuntu 26.04 (via WSL2)            | yes                      |
+
 ## Architecture & Components
 
 ### Math Backend & Performance Roadmap
