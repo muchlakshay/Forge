@@ -40,7 +40,7 @@
 - [Self-Attention](#self-attention)
 - [Embeddings](#embeddings)
 - [Tokenizer](#tokenizer)
-- [Parameters extraction & Model Load/Save (safetensors)](#reflection-based-parameters-&-model-load-save-safetensors)
+- [Parameters extraction & Model Load/Save (safetensors)](#reflection-based-parameters--model-loadsave-safetensors)
 
 ## Overview
 
@@ -1175,8 +1175,6 @@ Tensor out = embd(seq_ids);  // seq_ids: 1-D int32 Tensor of token IDs -> (seq_l
   weight tying with an output projection).
 - `parameters()` returns the embedding weight wrapped as a `Parameter`,
   named `embd.<n>.w`, for use with an optimizer.
-
-  ## Tokenizer
 
  ## Tokenizer
 
