@@ -1169,3 +1169,51 @@ Tensor out = embd(seq_ids);  // seq_ids: 1-D int32 Tensor of token IDs -> (seq_l
 - `parameters()` returns the embedding weight wrapped as a `Parameter`,
   named `embd.<n>.w`, for use with an optimizer.
 
+  ## Tokenizer
+
+ ## Tokenizer
+
+`SimpleTokenizer` implements a from-scratch Byte Pair Encoding (BPE)
+tokenizer with GPT-2-style pre-tokenization - the same word-splitting
+regex GPT-2 uses (handling contractions, letter runs, digit runs, and
+whitespace separately) before BPE merges are applied within each chunk.
+
+### Training a vocabulary
+
+```cpp
+SimpleTokenizer tok(SimpleTokenizer::Type::BPE);
+tok.on_file("corpus.txt", /*max_vocab=*/8000);
+```
+
+- Starts from a base vocabulary of 3 special tokens (`<pad>`, `<bos>`,
+  `<eos>`) plus all 256 raw byte values, then iteratively merges the most
+  frequent adjacent token pair in the corpus until `max_vocab` is reached
+  or no pair occurs more than once.
+- `max_vocab` must be at least 300 (`MIN_VOCAB_SIZE`) - lower throws
+  `std::invalid_argument`.
+
+### Loading a saved vocabulary
+
+```cpp
+tok.load("vocab.bin");
+```
+
+Vocabularies are stored in a simple binary format (`save`/`load`) - useful
+for loading a pretrained vocabulary (e.g. reconstructed GPT-2 merge rules)
+without retraining from a corpus.
+
+### Encoding and decoding
+
+```cpp
+Forge::Tensor ids = tok.encode("he went to the");   // -> 1-D int32 Tensor of token IDs
+StringVec tokens  = tok.decode(ids);           // -> token strings, one per ID
+```
+
+- `encode` returns a `Forge::Tensor` (int32), ready to feed directly into
+  `Embedding::operator()`.
+- `decode` throws `std::invalid_argument` if it encounters a token ID
+  outside the loaded vocabulary.
+- An optional `transformation` callback can be passed to `encode` to
+  preprocess each pre-tokenized chunk (e.g. lowercasing) before BPE merges
+  are applied.
+
