@@ -2,6 +2,7 @@
 #include "enums.h"
 #include "ops/Dispatcher/dispatcher.h"
 #include "Storage/storage_abstract.h"
+#include <variant>
 
 namespace Forge {
     void register_utility_kernels(Dispatcher<UtilityOps>& dispatcher);
