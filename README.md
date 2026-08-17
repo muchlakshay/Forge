@@ -1,5 +1,6 @@
 # Forge: A Deep Learning Framework from Scratch
 
+## Table Of Content
 - [Overview](#overview)
 - [Installation](#installation)
 - [Tensor](#tensor-documentation)
@@ -46,7 +47,7 @@
 
 Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for simplicity, making it suitable for learning use cases.
 
-Most people learn deep learning by calling `model.fit()` and trusting PyTorch got the internals right. I wanted to know *why* it's right - how a tensor actually sits in memory, why GEMM dominates a forward pass, why attention needs a causal mask and what breaks silently if you get a transpose wrong.
+Most people learn deep learning by calling `model.fit()` and trusting PyTorch got the internals right. I wanted to know why it's right - how a tensor actually sits in memory, why GEMM dominates a forward pass, why attention needs a causal mask and what breaks silently if you get a transpose wrong.
 
 So Forge is a deep learning framework built from scratch. Every primitive here - Linear, LayerNorm, SelfAttention, Optimizers, and some of the the AVX2 kernels underneath - exists because I wrote it myself and verified it against a real reference.
 
