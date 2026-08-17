@@ -3,6 +3,7 @@
 **Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on first principal building approach and educational clarity.
 
 - [Overview](#overview)
+- [Installation](#installation)
 - [Tensor](#tensor-documentation)
   - [Internal Components](#internal-components)
   - [Basic Creation](#basic-creation)
@@ -43,6 +44,99 @@
 ## Overview
 
 Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for performance and simplicity, making it suitable for both learning and production use cases.
+
+## Installation
+
+### Requirements
+
+- CMake 3.20+
+- A C++20 compiler
+  - Windows: MinGW-w64 (tested with the toolchain bundled in CLion)
+  - Linux: GCC or Clang
+- OpenBLAS
+- A CPU with AVX2 support (any x86-64 CPU from roughly the last 10 years)
+
+Eigen, reflect-cpp and ctti are fetched automatically via CMake's `FetchContent` -
+no manual setup needed for either.
+
+### Windows
+
+1. Install OpenBLAS. If you don't already have it, grab a prebuilt release
+   from the [OpenBLAS releases page](https://github.com/OpenMathLib/OpenBLAS/releases)
+   and extract it somewhere, e.g. `C:/Libs/OpenBLAS`.
+
+2. Clone the repo:
+```bash
+   git clone https://github.com/muchlakshay/Forge
+   cd Forge
+```
+
+3. Configure and build:
+```bash
+   cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DOPENBLAS_ROOT="C:/Libs/OpenBLAS"
+   cmake --build build
+```
+   If OpenBLAS is somewhere other than `C:/Libs/OpenBLAS`, point `-DOPENBLAS_ROOT`
+   at wherever you extracted it.
+
+4. `Forge` builds as a static library at `build/libForge.a`, with headers
+   under `core/` and `primitives/` in the repo itself.
+
+### Linux
+
+1. Install OpenBLAS and a compiler toolchain:
+```bash
+   sudo apt install build-essential cmake libopenblas-dev
+```
+
+2. Clone the repo:
+```bash
+   git clone https://github.com/muchlakshay/Forge
+   cd Forge
+```
+
+3. Configure and build:
+```bash
+   cmake -B build -DCMAKE_BUILD_TYPE=Release
+   cmake --build build
+```
+   `OPENBLAS_ROOT` defaults to `/usr`, which matches where `apt` installs it -
+   no extra flag needed unless you built OpenBLAS from source somewhere custom.
+
+4. `Forge` builds as a static library at `build/libForge.a`.
+
+### Building the test executables
+
+Forge includes `gpt2` and `mnist` test executables that demonstrate the
+framework in action. They're off by default
+so a plain build only produces the library. To build them too:
+
+```bash
+cmake -B build -DFORGE_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+This adds `gpt2`/`mnist` (Linux) or `gpt2.exe`/`mnist.exe` (Windows) to
+`build/`. Prebuilt version of these for windows are also available on the
+[Releases page](https://github.com/muchlakshay/Forge/releases/tag/0.1) if you'd rather skip building them yourself.
+
+### Linking against Forge
+
+Since `Forge` links OpenBLAS as a shared library rather than statically, any
+executable you link against `Forge` needs the OpenBLAS runtime library
+available at runtime, not just at link time:
+
+- **Windows:** copy `libopenblas.dll` (found under `OPENBLAS_ROOT/bin`) into
+  the same folder as your built executable. Without it, the executable will
+  fail to launch with a missing-DLL error.
+- **Linux:** either install OpenBLAS system-wide (`sudo apt install
+  libopenblas0`), or ensure `libopenblas.so`/`libopenblas.so.0` is somewhere
+  on your `LD_LIBRARY_PATH`.
+
+The `tests/CMakeLists.txt` in this repo already handles this automatically
+for the `gpt2`/`mnist` executables via a post-build copy step on Windows -
+if you're linking your own executable against `Forge` outside that setup,
+you'll need to do this step yourself.
 
 ## Architecture & Components
 
