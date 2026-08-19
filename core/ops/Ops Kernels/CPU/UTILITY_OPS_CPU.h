@@ -12,6 +12,7 @@ namespace Forge {
     struct RandomCPU;
     struct BroadcastAddCPU;
     struct BroadcastAddGradsCPU;
+    struct ReshapeGrads;
 };
 
 struct Forge::StorageBackendCPU : StorageBackend {
@@ -73,4 +74,9 @@ struct Forge::BroadcastAddCPU : BroadcastAddAbstract {
 
 struct Forge::BroadcastAddGradsCPU : BroadcastAddGradsAbstract {
     void compute_grads(const Tensor &A, const Tensor &B, const Tensor& bcast_dims, const Tensor &opt) const override;
+};
+
+struct Forge::ReshapeGrads : Kernel {
+    ReshapeGrads() : Kernel(ctti::type_id<ReshapeGrads>()){}
+    void compute_grads(const Tensor& A, const Tensor& rA);
 };

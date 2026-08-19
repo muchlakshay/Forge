@@ -22,6 +22,7 @@ inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) 
     static RandomCPU randomCPU{};
     static BroadcastAddCPU broadcastAddCPU{};
     static BroadcastAddGradsCPU broadcastAddGradsCPU{};
+    static ReshapeGrads reshapeGrads{};
 
     dispatcher.register_kernel<StorageBackend>(&storageBackendCPU, UtilityOps::storage_backend, DispatchKey::CPU);
     dispatcher.register_kernel<ConstantAbstract>(&constantCPU, UtilityOps::constant, DispatchKey::CPU);
@@ -31,4 +32,5 @@ inline void Forge::register_utility_kernels(Dispatcher<UtilityOps>& dispatcher) 
     dispatcher.register_kernel<RandomAbstract>(&randomCPU, UtilityOps::random, DispatchKey::CPU);
     dispatcher.register_kernel<BroadcastAddAbstract>(&broadcastAddCPU, UtilityOps::bcast_add, DispatchKey::CPU);
     dispatcher.register_kernel<BroadcastAddGradsAbstract>(&broadcastAddGradsCPU, UtilityOps::bcast_add, DispatchKey::CPU_Autodiff);
+    dispatcher.register_kernel<ReshapeGrads>(&reshapeGrads, UtilityOps::reshape_grads, DispatchKey::CPU);
 }

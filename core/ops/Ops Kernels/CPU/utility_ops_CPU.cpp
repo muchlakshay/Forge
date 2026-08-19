@@ -111,3 +111,5 @@ void Forge::BroadcastAddGradsCPU::compute_grads(const Tensor &A, const Tensor &B
         }
     }
 }
+
+void Forge::ReshapeGrads::compute_grads(const Tensor& A, const Tensor& rA) {A.gradients() = rA.gradients().reshape(A.shape());}
