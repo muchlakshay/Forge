@@ -134,3 +134,24 @@ Forge::Tensor Forge::Tensor::BroadcastAdd(const Tensor &another, const std::vect
     }
     return opt;
 }
+
+Forge::Tensor Forge::Tensor::reshape(const std::vector<std::size_t> &shape) {
+    auto size {std::accumulate(shape.begin(), shape.end(), static_cast<std::size_t>(1), std::multiplies())};
+    if (shape.size()>4) throw std::invalid_argument("Reshaped tensor rank must be at max 4");
+    if (size!=m_size) throw std::invalid_argument(
+        std::format("Invalid Dim Passed For Reshape: size {} doesnt match to the original {}", size, m_size));
+    Tensor reshaped {*this};
+    size = 1;
+    std::vector<std::size_t> new_strides (shape.size());
+    for (int i = static_cast<int>(shape.size()-1); i>=0; --i) {
+        new_strides[i] = size;
+        size*=shape[i];
+    }
+    reshaped.m_shape = std::move(shape);
+    reshaped.m_strides = std::move(new_strides);
+    if (m_grads)
+        attach_node<ReshapeGrads, 1>(reshaped, Device::CPU, dispatcher(), UtilityOps::reshape_grads, *this);
+    return reshaped;
+}
+
+

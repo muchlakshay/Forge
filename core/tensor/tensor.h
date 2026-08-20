@@ -4,11 +4,11 @@
 #include "../ops/Dispatcher/dispatcher.h"
 #include "../ops/Ops Kernels/kernels_registrar.h"
 #include "autograd/node_abstract.h"
-#include "execution_ctx.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <ranges>
 #include <memory>
 #include <iostream>
+#include "execution_ctx.h"
 
 namespace Forge {
     class Tensor;
@@ -115,8 +115,9 @@ public:
     [[nodiscard]] auto dispatch_key() const {return m_dispatch_key;}
     [[nodiscard]] const auto& storage() const {return m_storage;}
 
-    template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
-    Tensor reshape(Dims... dims);
+    // template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
+    // Tensor reshape(Dims... dims);
+    Tensor reshape(const std::vector<std::size_t>& shape);
     [[nodiscard]] Tensor clone() const;
     [[nodiscard]] auto& node() const {return m_node;}
     [[nodiscard]] auto& node() {return m_node;}
@@ -245,27 +246,6 @@ Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>> Forge::Tensor::as_eige
     for (int i = 0; i < m_shape.size(); i++) eigen_dims[Rank - m_shape.size() + i] = m_shape[i];
     return Eigen::TensorMap<Eigen::Tensor<T, Rank, Eigen::RowMajor>>(static_cast<T*>(m_storage->data()), eigen_dims);
 }
-
-
-template <typename... Dims> requires ((std::is_integral_v<Dims> && (!std::is_same_v<bool, Dims>)) && ...)
-Forge::Tensor Forge::Tensor::reshape(Dims... dims) {
-    auto size {(1*...*dims)};
-    if (size!=m_size) throw std::invalid_argument(
-        std::format("Invalid Dim Passed: size {} doesnt match to the original {}", size, m_size));
-    size = 1;
-    if (sizeof...(dims)>4) throw std::invalid_argument("Reshaped tensor rank must be at max 4");
-
-    std::vector<std::size_t> new_shape {dims...}, new_strides (new_shape.size());
-    for (int i = static_cast<int>(new_shape.size()-1); i>=0; --i) {
-        new_strides[i] = size;
-        size*=new_shape[i];
-    }
-    Tensor reshaped {*this};
-    reshaped.m_shape = std::move(new_shape);
-    reshaped.m_strides = std::move(new_strides);
-    return reshaped;
-}
-
 
 template<TensorStorageType T>
 void Forge::Tensor::setConstant(T constant) {
