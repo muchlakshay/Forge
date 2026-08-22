@@ -100,11 +100,11 @@ void Forge::SelfAttentionCPU::forward(const Tensor &input, const Tensor &query_W
 
         auto AdVr {atten_dot_V_map.shuffle(shuffling_dims)};
         forge_eval(atten_dot_V_reshaped_map, AdVr);
-        atten_dot_V_reshaped = atten_dot_V_reshaped.reshape(batch_size, seq_len, heads * V_dims);
+        atten_dot_V_reshaped = atten_dot_V_reshaped.reshape({batch_size, seq_len, heads * V_dims});
 
         auto opt_l {linear(atten_dot_V_reshaped)};
-        output = opt_l.reshape(batch_size, seq_len, d_model);
-        if (output.need_grads()) output.gradients() = output.gradients().reshape(batch_size, seq_len, d_model);
+        output = opt_l.reshape({batch_size, seq_len, d_model});
+        if (output.need_grads()) output.gradients() = output.gradients().reshape({batch_size, seq_len, d_model});
         if (need_grads) {
            attach_node<SelfAttentionGradsAbstract, 12>(output, input.device(), primitive_dispatcher(),
             primitive_ops::selfAttention, input, query_W, key_W, value_W, Q_bias, K_bias, V_bias,
