@@ -49,7 +49,7 @@ Forge implements core deep learning abstractions and primitives, enabling you to
 
 ### Requirements
 
-- CMake 3.20+
+- CMake 3.50+
 - A C++20 compiler
   - Windows: MinGW-w64 (tested with the toolchain bundled in CLion)
   - Linux: GCC or Clang
