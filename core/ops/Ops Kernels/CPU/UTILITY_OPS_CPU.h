@@ -78,5 +78,5 @@ struct Forge::BroadcastAddGradsCPU : BroadcastAddGradsAbstract {
 
 struct Forge::ReshapeGrads : Kernel {
     ReshapeGrads() : Kernel(ctti::type_id<ReshapeGrads>()){}
-    void compute_grads(const Tensor& A, const Tensor& rA);
+    void compute_grads(const Tensor& A, const Tensor& rA) const;
 };
