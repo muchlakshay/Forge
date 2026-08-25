@@ -17,11 +17,12 @@ inline void Forge::Extra::getMNIST(const std::string& output) {
     const auto unzip_output {(std::filesystem::path(output)).string()};
     download_with_fallback(data, output_);
     #if defined(_WIN32) || defined(_WIN64)
-        std::system(("tar -xf " + output_ + " -C " + unzip_output).c_str());
+        if (std::system(("tar -xf " + output_ + " -C " + unzip_output).c_str())!=0) {
+            throw std::runtime_error("Failed to unzip MNIST archive");
+        }
     #elif defined(__linux__)
         std::system(("unzip " + output_ + " -d " + unzip_output).c_str());
     #else
         #error "Unsupported operating system"
 #endif
-    std::system(("tar -xf " + output_ + " -C " + unzip_output).c_str());
 }
