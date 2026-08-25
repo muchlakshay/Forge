@@ -1,7 +1,6 @@
 # Forge: A Deep Learning Framework from Scratch
 
-**Forge** is a from-scratch deep learning framework implemented entirely in **C++**. It provides a modular, performant foundation for building and training neural networks with a focus on first principal building approach and educational clarity.
-
+## Table Of Content
 - [Overview](#overview)
 - [Installation](#installation)
 - [Tensor](#tensor-documentation)
@@ -40,10 +39,19 @@
   - [Adaptive Moment Estimation (Adam)](#forgeadam)
 - [LayerNorm](#layernorm)
 - [Self-Attention](#self-attention)
+- [Embeddings](#embeddings)
+- [Tokenizer](#tokenizer)
+- [Parameters extraction & Model Load/Save (safetensors)](#reflection-based-parameters--model-loadsave-safetensors)
 
 ## Overview
 
-Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for performance and simplicity, making it suitable for both learning and production use cases.
+Forge implements core deep learning abstractions and primitives, enabling you to build, train, and optimize neural network models efficiently. The framework is designed for simplicity, making it suitable for learning use cases.
+
+Most people learn deep learning by calling `model.fit()` and trusting PyTorch got the internals right. I wanted to know why it's right - how a tensor actually sits in memory, why GEMM dominates a forward pass, why attention needs a causal mask and what breaks silently if you get a transpose wrong.
+
+So Forge is a deep learning framework built from scratch. Every primitive here - Linear, LayerNorm, SelfAttention, Optimizers, and some of the the AVX2 kernels underneath - exists because I wrote it myself and verified it against a real reference.
+
+The proof: Forge's GPT-2, loaded with real pretrained weights, matches Hugging Face's `transformers` **token-for-token** under greedy decoding. Not close - exact. That's what convinces me this actually taught me how modern AI works, not just how to produce something that looks like it does.
 
 ## Installation
 
@@ -137,6 +145,13 @@ The `tests/CMakeLists.txt` in this repo already handles this automatically
 for the `gpt2`/`mnist` executables via a post-build copy step on Windows -
 if you're linking your own executable against `Forge` outside that setup,
 you'll need to do this step yourself.
+
+### Tested Platforms
+
+| Platform | Arch  | Tested OS Version              | Most Thoroughly Tested |
+|----------|-------|----------------------------------|:-----------------------:|
+| Windows  | x64   | Windows 11 Pro version 25H2         | yes                      |
+| Linux    | x64   | Ubuntu 26.04 (via WSL2)            | yes                      |
 
 ## Architecture & Components
 
@@ -993,7 +1008,7 @@ Tensor y = ln(x); // normalized output, same shape (batch, seq_len, 512)
 y.backward(); // gradients flow back into x, ln.gamma(), and ln.beta() automatically
 
 // gamma/beta are ordinary learnable parameters - hand them to an optimizer like any other:
-Forge::Adam optimizer({Parameter{&ln.gamma()}, Parameter{&ln.beta()}}, /*lr=*/0.001f);
+Forge::Adam optimizer(ln.parameters(), /*lr=*/0.001f);
 ```
 
 ---
@@ -1121,10 +1136,7 @@ y.backward();
 
 // query/key/value projection weights, plus the internal Linear's own weights,
 // are all ordinary learnable parameters - register them with your optimizer
-Forge::Adam optimizer({
-    Parameter{&attn.query()}, Parameter{&attn.key()}, Parameter{&attn.value()}
-    // + the Linear layer's own parameters, see its docs
-}, /*lr=*/0.0001f);
+Forge::Adam optimizer(attn.parameters(), /*lr=*/0.0001f);
 ```
 
 ---
@@ -1136,4 +1148,149 @@ Forge::Adam optimizer({
 - **Heads up:** the input-vs-mask length check in `operator()` compares `input.shape()[0]` against the mask's sequence length. For a `(batch, seq_len, d_model)` input, `shape()[0]` is the batch size, not `seq_len` - it looks like it should be comparing against `shape()[1]` instead. As written, this check only behaves correctly when `batch_size == seq_len`, so don't rely on it to catch a real mismatch.
 - **The output projection has no bias** - `linear()` is constructed with bias disabled.
 - **Weight initialization applies only to Q/K/V.** The internal `Linear` layer initializes itself independently (see the `Linear` module's own docs for its default scheme).
+
+## Embeddings
+
+`Forge::Embedding` implements a learned token embedding lookup table -
+mapping integer token IDs to dense `d_model`-dimensional vectors, the
+first layer in a typical transformer.
+
+### API
+
+```cpp
+Forge::Embedding embd(
+    d_model,               // embedding dimension
+    vocab_size,            // number of distinct tokens
+    Dtype::float32,        // must be float32 or float64 - int32 is rejected at construction
+    /*need_grads=*/true,
+    Initializers::xavier_normal,
+    Device::CPU
+);
+
+Tensor out = embd(seq_ids);  // seq_ids: 1-D int32 Tensor of token IDs -> (seq_len, d_model)
+```
+
+- `seq_ids` must be a 1-D `int32` tensor - any other dtype or rank throws
+  `std::invalid_argument`.
+- The embedding table itself (`m_embeddings`) must be `float32` (for now) -
+  constructing with `Dtype::int32` throws immediately.
+- Dispatches through `primitive_dispatcher()` to the correct backend (currently only CPU)
+  implementation (`EmbeddingsImplAbstract`) based on the output tensor's
+  dispatch key, keeping the op backend-agnostic at the call site.
+- When `need_grads` is true, a gradient node (`EmbeddingsGradsAbstract`) is
+  automatically attached to the autograd graph after the forward pass.
+- `all_embeddings()` exposes the underlying weight tensor directly (e.g. for
+  weight tying with an output projection).
+- `parameters()` returns the embedding weight wrapped as a `Parameter`,
+  named `embd.<n>.w`, for use with an optimizer.
+
+ ## Tokenizer
+
+`SimpleTokenizer` implements a from-scratch Byte Pair Encoding (BPE)
+tokenizer with GPT-2-style pre-tokenization - the same word-splitting
+regex GPT-2 uses (handling contractions, letter runs, digit runs, and
+whitespace separately) before BPE merges are applied within each chunk.
+
+### Training a vocabulary
+
+```cpp
+SimpleTokenizer tok(SimpleTokenizer::Type::BPE);
+tok.on_file("corpus.txt", /*max_vocab=*/8000);
+```
+
+- Starts from a base vocabulary of 3 special tokens (`<pad>`, `<bos>`,
+  `<eos>`) plus all 256 raw byte values, then iteratively merges the most
+  frequent adjacent token pair in the corpus until `max_vocab` is reached
+  or no pair occurs more than once.
+- `max_vocab` must be at least 300 (`MIN_VOCAB_SIZE`) - lower throws
+  `std::invalid_argument`.
+
+### Loading a saved vocabulary
+
+```cpp
+tok.load("vocab.bin");
+```
+
+Vocabularies are stored in a simple binary format (`save`/`load`) - useful
+for loading a pretrained vocabulary (e.g. reconstructed GPT-2 merge rules)
+without retraining from a corpus.
+
+### Encoding and decoding
+
+```cpp
+Forge::Tensor ids = tok.encode("he went to the");   // -> 1-D int32 Tensor of token IDs
+StringVec tokens  = tok.decode(ids);           // -> token strings, one per ID
+```
+
+- `encode` returns a `Forge::Tensor` (int32), ready to feed directly into
+  `Embedding::operator()`.
+- `decode` throws `std::invalid_argument` if it encounters a token ID
+  outside the loaded vocabulary.
+- An optional `transformation` callback can be passed to `encode` to
+  preprocess each pre-tokenized chunk (e.g. lowercasing) before BPE merges
+  are applied.
+
+## Reflection-Based Parameters & Model Load/Save (safetensors)
+
+Forge uses [reflect-cpp](https://github.com/getml/reflect-cpp) to automatically
+discover a model's trainable parameters from its struct layout, with no manual
+registration required - any member exposing a `parameters()` method is picked
+up automatically, including nested submodules.
+
+### Defining a model
+
+Any aggregate struct whose members expose `parameters() -> std::vector<Parameter>`
+(e.g. `Linear`, `Embedding`, `LayerNorm`) is automatically reflectable:
+
+```cpp
+struct GPT2Block {
+    Forge::SelfAttention attn;
+    Forge::LayerNorm ln1;
+    Forge::Linear    mlp_fc;
+    Forge::LayerNorm ln2;
+};
+```
+
+No base class, no manual parameter registration - `rfl::to_view` introspects
+the struct's members directly.
+
+### Extracting parameters for an optimizer
+
+```cpp
+auto params = Forge::extract_parameters(model);   // flat std::vector<Parameter>
+Forge::Adam optimizer(params, /*lr=*/...);
+```
+
+Walks every member satisfying the `HasParameters` concept and collects their
+`Parameter`s into one flat list - this is what feeds the optimizer without
+you having to hand-list every layer's weights.
+
+### Saving weights
+
+```cpp
+Forge::save(model, "weights.safetensors");
+```
+
+Writes an actual [safetensors](https://github.com/huggingface/safetensors)-format
+file: an 8-byte header length, a JSON header describing each tensor's dtype,
+shape, and byte offset (padded to an 8-byte boundary), followed by the raw
+tensor data. Parameter names are built as `<member_name>.<param_name>`
+(recursing into nested submodules via `get_state_dict`), matching the naming
+convention each layer's own `parameters()` already establishes.
+
+### Loading weights
+
+```cpp
+Forge::load(model, "weights.safetensors");
+```
+
+Reads the file, matches tensor names against the model's own state dict, and
+copies loaded data directly into each parameter in place. Throws if the
+number of tensors doesn't match the model's parameter count - a basic
+architecture-mismatch guard. This is the mechanism used to load real GPT-2
+weights directly into Forge's GPT-2 implementation.
+
+`Forge::load_safetensors(filename)` is also available standalone, returning
+a raw `std::map<std::string, Tensor>` without requiring a matching model
+struct - useful for inspecting a checkpoint's contents directly.
 
