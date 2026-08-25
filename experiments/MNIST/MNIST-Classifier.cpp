@@ -33,10 +33,11 @@ int main() {
     auto [images, labels] = load_mnist(train_img_path, train_lab_path);
     auto [test_images, test_labels] = load_mnist(test_img_path, test_lab_path);
 
-    images = images.reshape(1875, 32, 784);
-    labels = labels.reshape(1875, 32, 10);
-    test_images = test_images.reshape(10000, 784);
-    test_labels = test_labels.reshape(10000, 10);
+    images = images.reshape({1875, 32, 784});
+    labels = labels.reshape({1875, 32, 10});
+    test_images = test_images.reshape({10000, 784});
+    test_labels = test_labels.reshape({10000, 10});
+    test_labels = test_labels.reshape({10000, 10});
 
     MLP mlp {};
     Forge::CrossEntropy CE;
