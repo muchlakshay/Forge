@@ -214,7 +214,7 @@ Forge is ideal for:
 - Learning deep learning systems implementation from first principles
 - Experimenting with neural network architectures
 
-# Tensor Documentation
+# Tensor
 
 ## Tensor Class Overview
 
@@ -415,7 +415,7 @@ output.backward(true);  // Second backward pass
 
 ---
 
-# Linear Layer Documentation
+# Linear Layer
 
 ## Linear Class Overview
 
@@ -732,7 +732,7 @@ probs.backward();
 
 ---
 
-# Loss Functions Documentation
+# Loss Functions 
 
 Loss functions quantify the difference between predictions and ground truth.
 
@@ -787,7 +787,7 @@ Tensor loss = bce(logits, targets);  // targets: 0 or 1
 ```cpp
 Tensor operator()(const Tensor& predictions, const Tensor& ground_truth);
 ```
-# Optimizers Documentation
+# Optimizers
 
 This module provides the public-facing optimizers used to train models. Each optimizer owns the parameters it was constructed with, along with any internal state (momentum/moment buffers), and updates those parameters in place each time `update()` is called. Internally, `update()` dispatches to a device-specific backend (currently only CPU supported).
 
