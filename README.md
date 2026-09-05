@@ -86,7 +86,7 @@ no extra flag needed unless you built OpenBLAS from somewhere else.
 
 ### Building the test executables
 
-Forge has two test executables - `gpt2` and 'mnsit' that shows the framework in action
+Forge has two test executables - `gpt2` and `mnist` that shows the framework in action
 and they are not built by default.
 
 
@@ -103,7 +103,7 @@ for both linux and windows is available on the [releases page](https://github.co
 
 ### Linking Against Forge And OpenBLAS Runtime
 
-Forge links against OpenBLAS as a shared library (will be changed in future to a link against the static lib),
+Forge links against OpenBLAS as a shared library (will be changed in future to link against the static lib),
 so the OpenBLAS runtime needs to be available when running an executable that uses Forge.
 
 on windows, copy `libopenblas.dll` from `OPENBLAS_ROOT/bin` into the same directory as your executable.
