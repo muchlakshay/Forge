@@ -89,6 +89,11 @@ Forge::Tensor::Random(const std::vector<std::size_t>& shape, Dtype=Dtype::float3
 `Initializers::xavier_normal` (default),
 `Initializers::xavier_uniform`, `Initializers::he_normal` and `Initializers::he_uniform`
 
+```C++
+Tensor like(const Tensor& tensor, Dtype dtype, bool need_grads=true, Device device=Device::CPU);
+```
+`Tensor::like` retuns a tensor of passed tesor shape
+
 ### Tensor Manipulation
 
 Reshaping:
